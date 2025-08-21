@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "n8n-mcp": {
+      "command": "bash",
+      "args": [
+        "/Users/harendrasingh/infrastructure/ansible/scripts/n8n/start-n8n-mcp.sh"
+      ]
+    }
+  }
+}

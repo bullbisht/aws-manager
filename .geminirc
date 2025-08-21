@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "n8n-mcp": {
+      "command": "node",
+      "args": ["/Users/harendrasingh/projects/n8n/node_modules/n8n-mcp/dist/mcp/index.js"],
+      "env": {
+        "MCP_MODE": "stdio",
+        "LOG_LEVEL": "error",
+        "DISABLE_CONSOLE_OUTPUT": "true",
+        "N8N_API_URL": "http://localhost:30678",
+        "N8N_API_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwMDNjMzUyZi0zYzhhLTRiMDUtYWE3Yy1mMTVlMzllMjQwMGMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzUzOTc5OTgyfQ.3K06ixVE_G-GZRw-LoQ75GxLge_4LLhMcAe4kV8vERY"
+      }
+    }
+  }
+}

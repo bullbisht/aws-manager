@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S3 Manager Frontend Integration Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; }
+        .success { color: green; }
+        .error { color: red; }
+        .loading { color: orange; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+        button { margin: 5px; padding: 10px 15px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 S3 Manager Frontend Integration Test</h1>
+    
+    <div class="test-section">
+        <h3>Test 1: Frontend API Client Test</h3>
+        <button onclick="testLogin()">Test Login</button>
+        <button onclick="testProfile()">Test Profile</button>
+        <button onclick="testBuckets()">Test Buckets</button>
+        <div id="test1-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 2: Authentication Flow</h3>
+        <button onclick="testAuthFlow()">Test Complete Auth Flow</button>
+        <div id="test2-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 3: Navigation Test</h3>
+        <button onclick="testNavigation()">Test Page Navigation</button>
+        <div id="test3-result"></div>
+    </div>
+
+    <script>
+        async function log(testId, message, type = 'info') {
+            const resultDiv = document.getElementById(testId + '-result');
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : 'loading';
+            resultDiv.innerHTML += `<div class="${className}">${new Date().toLocaleTimeString()}: ${message}</div>`;
+        }
+
+        async function testLogin() {
+            log('test1', 'Testing login API...', 'loading');
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        authType: 'credentials',
+                        accessKeyId: 'test-key',
+                        secretAccessKey: 'test-secret',
+                        region: 'us-east-1'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    log('test1', '✅ Login API: Success', 'success');
+                } else {
+                    log('test1', `❌ Login API: ${data.error || 'Failed'}`, 'error');
+                }
+            } catch (error) {
+                log('test1', `❌ Login API: ${error.message}`, 'error');
+            }
+        }
+
+        async function testProfile() {
+            log('test1', 'Testing profile API...', 'loading');
+            
+            try {
+                const response = await fetch('/api/user/profile', {
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    log('test1', '✅ Profile API: Success', 'success');
+                    log('test1', `User: ${data.user?.email || 'unknown'}`, 'info');
+                } else {
+                    log('test1', `❌ Profile API: ${data.error || 'Failed'}`, 'error');
+                }
+            } catch (error) {
+                log('test1', `❌ Profile API: ${error.message}`, 'error');
+            }
+        }
+
+        async function testBuckets() {
+            log('test1', 'Testing buckets API...', 'loading');
+            
+            try {
+                const response = await fetch('/api/s3/buckets', {
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    log('test1', `✅ Buckets API: Success (${data.buckets?.length || 0} buckets)`, 'success');
+                } else {
+                    log('test1', `❌ Buckets API: ${data.error || 'Failed'}`, 'error');
+                }
+            } catch (error) {
+                log('test1', `❌ Buckets API: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAuthFlow() {
+            log('test2', 'Testing complete authentication flow...', 'loading');
+            
+            // Step 1: Login
+            log('test2', 'Step 1: Attempting login...', 'loading');
+            await testLogin();
+            
+            // Wait a bit
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Step 2: Check profile
+            log('test2', 'Step 2: Checking profile...', 'loading');
+            await testProfile();
+            
+            // Step 3: Test protected endpoint
+            log('test2', 'Step 3: Testing protected endpoint...', 'loading');
+            await testBuckets();
+            
+            log('test2', '✅ Authentication flow test complete', 'success');
+        }
+
+        async function testNavigation() {
+            log('test3', 'Testing page navigation...', 'loading');
+            
+            const pages = ['/', '/login', '/dashboard', '/buckets', '/api-test'];
+            
+            for (const page of pages) {
+                try {
+                    const response = await fetch(page);
+                    if (response.ok) {
+                        log('test3', `✅ ${page}: Accessible`, 'success');
+                    } else {
+                        log('test3', `❌ ${page}: ${response.status}`, 'error');
+                    }
+                } catch (error) {
+                    log('test3', `❌ ${page}: ${error.message}`, 'error');
+                }
+            }
+            
+            log('test3', '✅ Navigation test complete', 'success');
+        }
+
+        // Auto-run page accessibility test on load
+        window.addEventListener('load', () => {
+            log('test3', 'Auto-running page accessibility test...', 'loading');
+            testNavigation();
+        });
+    </script>
+</body>
+</html>

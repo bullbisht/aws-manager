@@ -1,0 +1,36 @@
+.resizableTable {
+    display: grid;
+    min-width: 100%;
+}
+
+.columnHeader {
+    position: relative;
+}
+
+.resizeHandle {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    cursor: col-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.resizeHandle:hover {
+    background-color: rgba(59, 130, 246, 0.2);
+}
+
+.resizeHandle:hover .resizeIcon {
+    color: rgb(59, 130, 246);
+}
+
+.resizeIcon {
+    width: 12px;
+    height: 12px;
+    color: rgb(156, 163, 175);
+    transition: color 0.2s;
+}
