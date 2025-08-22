@@ -98,142 +98,134 @@ function BucketCard({ bucket, onBucketSelect, onDeleteBucket, countdownSeconds, 
       className={`transition-all duration-200 ${
         bucket.pendingDeletion 
           ? 'opacity-60 border-red-200 bg-red-50 cursor-not-allowed' 
-          : 'cursor-pointer'
+          : 'cursor-pointer hover:shadow-md'
       } ${
         isHovered && !bucket.pendingDeletion 
-          ? 'shadow-lg scale-[1.02] border-blue-200' 
-          : 'shadow-sm hover:shadow-md'
+          ? 'border-blue-200 shadow-md' 
+          : 'border-gray-200'
       }`}
       onMouseEnter={() => !bucket.pendingDeletion && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onClick={() => {
+        if (!bucket.pendingDeletion && onBucketSelect) {
+          console.log('Card clicked for bucket:', bucket.Name);
+          onBucketSelect(bucket.Name);
+        }
+      }}
     >
-      <CardHeader className="pb-3">
+      <CardContent className="p-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Folder className="h-5 w-5 text-blue-600" />
+          {/* Left side - Bucket info */}
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="flex-shrink-0 p-2 bg-blue-100 rounded-lg">
+              <Folder className="h-4 w-4 text-blue-600" />
             </div>
-            <div>
-              <CardTitle className={`text-lg font-semibold ${
-                bucket.pendingDeletion 
-                  ? 'text-red-500 line-through' 
-                  : 'text-gray-900'
-              }`}>
-                {bucket.Name}
-                {bucket.pendingDeletion && countdownSeconds && (
-                  <span className="ml-2 text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">
-                    Deleting in {countdownSeconds}s
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <h3 className={`font-semibold text-base truncate ${
+                  bucket.pendingDeletion 
+                    ? 'text-red-500 line-through' 
+                    : 'text-gray-900'
+                }`}>
+                  {bucket.Name}
+                </h3>
+                {bucket.pendingDeletion && (
+                  <span className="flex-shrink-0 text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">
+                    {countdownSeconds ? `Deleting in ${countdownSeconds}s` : 'Deleting...'}
                   </span>
                 )}
-                {bucket.pendingDeletion && !countdownSeconds && (
-                  <span className="ml-2 text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">
-                    Deleting...
-                  </span>
+              </div>
+              <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
+                <div className="flex items-center gap-1">
+                  <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                  {bucket.Region}
+                </div>
+                <div className="flex items-center gap-1">
+                  <FileText className="h-3 w-3" />
+                  {bucket.Objects.toLocaleString()} objects
+                </div>
+                <div className="flex items-center gap-1">
+                  <HardDrive className="h-3 w-3" />
+                  {bucket.Size}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {new Date(bucket.CreationDate).toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric',
+                    year: new Date(bucket.CreationDate).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Right side - Actions */}
+          <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+            {bucket.pendingDeletion ? (
+              <Button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUndoDelete?.(bucket.Name);
+                }}
+                className="bg-orange-600 hover:bg-orange-700 text-white"
+                size="sm"
+              >
+                <RefreshCw className="h-4 w-4 mr-1" />
+                Undo
+                {countdownSeconds && (
+                  <span className="ml-1 text-xs">({countdownSeconds}s)</span>
                 )}
-              </CardTitle>
-              <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
-                <span className="w-2 h-2 bg-green-400 rounded-full"></span>
-                {bucket.Region}
-              </p>
-            </div>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="grid grid-cols-3 gap-4 mb-4">
-          <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <div className="flex items-center justify-center mb-1">
-              <FileText className="h-4 w-4 text-gray-500" />
-            </div>
-            <div className="text-lg font-semibold text-gray-900">
-              {bucket.Objects.toLocaleString()}
-            </div>
-            <div className="text-xs text-gray-500">Objects</div>
-          </div>
-          <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <div className="flex items-center justify-center mb-1">
-              <HardDrive className="h-4 w-4 text-gray-500" />
-            </div>
-            <div className="text-lg font-semibold text-gray-900">
-              {bucket.Size}
-            </div>
-            <div className="text-xs text-gray-500">Size</div>
-          </div>
-          <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <div className="flex items-center justify-center mb-1">
-              <Calendar className="h-4 w-4 text-gray-500" />
-            </div>
-            <div className="text-lg font-semibold text-gray-900">
-              {new Date(bucket.CreationDate).toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric' 
-              })}
-            </div>
-            <div className="text-xs text-gray-500">Created</div>
-          </div>
-        </div>
-        
-        <div className="flex gap-2 pt-2 border-t border-gray-100">
-          {bucket.pendingDeletion ? (
-            // Show undo button when deletion is pending
-            <Button 
-              onClick={() => onUndoDelete?.(bucket.Name)}
-              className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
-              size="sm"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Undo Delete
-              {countdownSeconds && (
-                <span className="ml-2 bg-orange-800 text-white px-2 py-0.5 rounded text-xs">
-                  {countdownSeconds}s
-                </span>
-              )}
-            </Button>
-          ) : (
-            <>
-              {onBucketSelect ? (
-                <Button 
-                  onClick={() => {
-                    console.log('Browse Objects clicked for bucket:', bucket.Name);
-                    onBucketSelect(bucket.Name);
-                  }}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                  size="sm"
-                >
-                  <Folder className="h-4 w-4 mr-2" />
-                  Browse Objects
-                </Button>
-              ) : (
-                <Link href={`/buckets/${encodeURIComponent(bucket.Name)}`} className="flex-1">
+              </Button>
+            ) : (
+              <>
+                {onBucketSelect ? (
                   <Button 
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log('Browse button clicked for bucket:', bucket.Name);
+                      onBucketSelect(bucket.Name);
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
                     size="sm"
                   >
-                    <Folder className="h-4 w-4 mr-2" />
-                    Browse Objects
+                    <Folder className="h-4 w-4 mr-1" />
+                    Browse
                   </Button>
-                </Link>
-              )}
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="border-gray-300 text-gray-600 hover:bg-gray-50"
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation(); // Prevent card click
-                  onDeleteBucket?.(bucket.Name);
-                }}
-                className="border-red-300 text-red-600 hover:bg-red-50"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </>
-          )}
+                ) : (
+                  <Link href={`/buckets/${encodeURIComponent(bucket.Name)}`}>
+                    <Button 
+                      onClick={(e) => e.stopPropagation()}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      size="sm"
+                    >
+                      <Folder className="h-4 w-4 mr-1" />
+                      Browse
+                    </Button>
+                  </Link>
+                )}
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={(e) => e.stopPropagation()}
+                  className="border-gray-300 text-gray-600 hover:bg-gray-50 px-2"
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteBucket?.(bucket.Name);
+                  }}
+                  className="border-red-300 text-red-600 hover:bg-red-50 px-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
