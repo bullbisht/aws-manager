@@ -11,7 +11,7 @@ import { SkeletonCard } from '@/components/ui/skeleton';
 import { useToastHelpers, useToast } from '@/components/ui/toast';
 import { BucketDeleteModal } from '@/components/ui/bucket-delete-modal';
 import Link from 'next/link';
-import { RefreshCw, Folder, Calendar, HardDrive, FileText, Settings, Trash2, Plus, Lock } from 'lucide-react';
+import { RefreshCw, Folder, Calendar, HardDrive, FileText, Settings, Trash2, Plus, Lock, Search, Filter, ArrowUpDown, ChevronDown } from 'lucide-react';
 
 interface BucketListProps {
   onBucketSelect?: (bucketName: string) => void;
@@ -234,9 +234,14 @@ function BucketCard({ bucket, onBucketSelect, onDeleteBucket, countdownSeconds, 
 
 function BucketListContent({ onBucketSelect }: BucketListProps) {
   const [buckets, setBuckets] = useState<Bucket[]>([]);
+  const [filteredBuckets, setFilteredBuckets] = useState<Bucket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isPending, startTransition] = useTransition();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'name' | 'region' | 'objects' | 'size' | 'created'>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [regionFilter, setRegionFilter] = useState<string>('all');
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean;
     bucketName: string;
@@ -307,6 +312,59 @@ function BucketListContent({ onBucketSelect }: BucketListProps) {
       setLoading(false);
     }
   };
+
+  // Filter and sort buckets
+  useEffect(() => {
+    let filtered = buckets.filter(bucket => {
+      const matchesSearch = bucket.Name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesRegion = regionFilter === 'all' || bucket.Region === regionFilter;
+      return matchesSearch && matchesRegion;
+    });
+
+    // Sort buckets
+    filtered.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'name':
+          comparison = a.Name.localeCompare(b.Name);
+          break;
+        case 'region':
+          comparison = a.Region.localeCompare(b.Region);
+          break;
+        case 'objects':
+          comparison = a.Objects - b.Objects;
+          break;
+        case 'size':
+          // Parse size strings for comparison
+          const parseSize = (sizeStr: string) => {
+            const match = sizeStr.match(/^([\d.]+)\s*([KMGT]?B)$/i);
+            if (!match) return 0;
+            const value = parseFloat(match[1]);
+            const unit = match[2].toUpperCase();
+            const multipliers: { [key: string]: number } = {
+              'B': 1,
+              'KB': 1024,
+              'MB': 1024 * 1024,
+              'GB': 1024 * 1024 * 1024,
+              'TB': 1024 * 1024 * 1024 * 1024
+            };
+            return value * (multipliers[unit] || 1);
+          };
+          comparison = parseSize(a.Size) - parseSize(b.Size);
+          break;
+        case 'created':
+          comparison = new Date(a.CreationDate).getTime() - new Date(b.CreationDate).getTime();
+          break;
+        default:
+          comparison = 0;
+      }
+      
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+    setFilteredBuckets(filtered);
+  }, [buckets, searchQuery, regionFilter, sortBy, sortOrder]);
 
   const handleRefresh = () => {
     startTransition(() => {
@@ -448,6 +506,9 @@ function BucketListContent({ onBucketSelect }: BucketListProps) {
     }
   };
 
+  // Get unique regions for filter dropdown
+  const uniqueRegions = Array.from(new Set(buckets.map(bucket => bucket.Region))).sort();
+
   if (loading || authLoading) {
     return <BucketCardSkeleton />;
   }
@@ -490,9 +551,73 @@ function BucketListContent({ onBucketSelect }: BucketListProps) {
 
   return (
     <div className="space-y-4">
+      {/* Search and Filter Controls */}
+      <div className="flex flex-col gap-4 p-4 bg-gray-50 rounded-lg border">
+        <div className="flex items-center gap-4">
+          {/* Search */}
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search buckets..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          
+          {/* Region Filter */}
+          <div className="relative">
+            <select
+              value={regionFilter}
+              onChange={(e) => setRegionFilter(e.target.value)}
+              aria-label="Filter by region"
+              className="appearance-none bg-white border border-gray-300 rounded-md px-3 py-2 pr-8 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">All Regions</option>
+              {uniqueRegions.map(region => (
+                <option key={region} value={region}>{region}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+          </div>
+          
+          {/* Sort Controls */}
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                aria-label="Sort buckets by"
+                className="appearance-none bg-white border border-gray-300 rounded-md px-3 py-2 pr-8 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="name">Sort by Name</option>
+                <option value="region">Sort by Region</option>
+                <option value="objects">Sort by Objects</option>
+                <option value="size">Sort by Size</option>
+                <option value="created">Sort by Created</option>
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            </div>
+          </div>
+          
+          <Button
+            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+            variant="outline"
+            size="sm"
+            className="px-3"
+          >
+            <ArrowUpDown className="h-4 w-4" />
+            {sortOrder === 'asc' ? 'Asc' : 'Desc'}
+          </Button>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between mb-2">
         <p className="text-sm text-gray-600">
-          {buckets.length} bucket{buckets.length !== 1 ? 's' : ''} found
+          {filteredBuckets.length} of {buckets.length} bucket{buckets.length !== 1 ? 's' : ''} 
+          {searchQuery && ` matching "${searchQuery}"`}
+          {regionFilter !== 'all' && ` in ${regionFilter}`}
         </p>
         <Button
           onClick={handleRefresh}
@@ -510,16 +635,49 @@ function BucketListContent({ onBucketSelect }: BucketListProps) {
       </div>
       
       <div className={`space-y-4 transition-opacity duration-200 ${isPending ? 'opacity-70' : ''}`}>
-        {buckets.map((bucket) => (
-          <BucketCard 
-            key={bucket.Name} 
-            bucket={bucket} 
-            onBucketSelect={onBucketSelect}
-            onDeleteBucket={handleDeleteBucket}
-            countdownSeconds={deletionCountdowns.get(bucket.Name)}
-            onUndoDelete={undoDelete}
-          />
-        ))}
+        {filteredBuckets.length === 0 ? (
+          <Card className="border-dashed border-2 border-gray-200">
+            <CardContent className="p-8">
+              <div className="text-center">
+                <Filter className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No buckets match your filters</h3>
+                <p className="text-gray-500 mb-4">
+                  Try adjusting your search terms or filters to find what you're looking for.
+                </p>
+                <div className="flex justify-center gap-2">
+                  <Button 
+                    onClick={() => setSearchQuery('')}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Clear Search
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      setSearchQuery('');
+                      setRegionFilter('all');
+                    }}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Clear All Filters
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          filteredBuckets.map((bucket) => (
+            <BucketCard 
+              key={bucket.Name} 
+              bucket={bucket} 
+              onBucketSelect={onBucketSelect}
+              onDeleteBucket={handleDeleteBucket}
+              countdownSeconds={deletionCountdowns.get(bucket.Name)}
+              onUndoDelete={undoDelete}
+            />
+          ))
+        )}
       </div>
 
       {/* Delete Confirmation Modal */}

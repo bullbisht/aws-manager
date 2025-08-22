@@ -27,7 +27,11 @@ import {
   ChevronRight,
   Home,
   Filter,
-  GripVertical
+  GripVertical,
+  ArrowUpDown,
+  ChevronDown,
+  Calendar,
+  HardDrive
 } from 'lucide-react';
 
 interface S3Object {
@@ -62,6 +66,9 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<'name' | 'size' | 'lastModified' | 'storageClass'>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [storageClassFilter, setStorageClassFilter] = useState<string>('all');
   const [currentPrefix, setCurrentPrefix] = useState('');
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
   const [showUploadArea, setShowUploadArea] = useState(false);
@@ -279,9 +286,38 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
 
   const breadcrumbParts = currentPrefix ? currentPrefix.split('/').filter(Boolean) : [];
 
-  const filteredObjects = optimisticObjects.filter(obj =>
-    obj.Key.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Get unique storage classes for filter dropdown
+  const uniqueStorageClasses = Array.from(new Set(optimisticObjects.map(obj => obj.StorageClass))).sort();
+
+  // Enhanced filtering and sorting
+  const filteredObjects = optimisticObjects
+    .filter(obj => {
+      const matchesSearch = obj.Key.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStorageClass = storageClassFilter === 'all' || obj.StorageClass === storageClassFilter;
+      return matchesSearch && matchesStorageClass;
+    })
+    .sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'name':
+          comparison = a.Key.localeCompare(b.Key);
+          break;
+        case 'size':
+          comparison = a.Size - b.Size;
+          break;
+        case 'lastModified':
+          comparison = new Date(a.LastModified).getTime() - new Date(b.LastModified).getTime();
+          break;
+        case 'storageClass':
+          comparison = a.StorageClass.localeCompare(b.StorageClass);
+          break;
+        default:
+          comparison = 0;
+      }
+      
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
 
   if (loading && objects.length === 0) {
     return (
@@ -460,16 +496,135 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
         </Card>
       )}
 
+      {/* Search and Filter Controls */}
+      <div className="flex flex-col gap-4 p-4 bg-gray-50 rounded-lg border">
+        <div className="flex items-center gap-4">
+          {/* Search */}
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search objects..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          
+          {/* Storage Class Filter */}
+          <div className="relative">
+            <select
+              value={storageClassFilter}
+              onChange={(e) => setStorageClassFilter(e.target.value)}
+              aria-label="Filter by storage class"
+              className="appearance-none bg-white border border-gray-300 rounded-md px-3 py-2 pr-8 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">All Storage Classes</option>
+              {uniqueStorageClasses.map(storageClass => (
+                <option key={storageClass} value={storageClass}>{storageClass}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+          </div>
+          
+          {/* Sort Controls */}
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                aria-label="Sort objects by"
+                className="appearance-none bg-white border border-gray-300 rounded-md px-3 py-2 pr-8 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="name">Sort by Name</option>
+                <option value="size">Sort by Size</option>
+                <option value="lastModified">Sort by Modified</option>
+                <option value="storageClass">Sort by Storage Class</option>
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            </div>
+            
+            <Button
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              variant="outline"
+              size="sm"
+              className="px-3"
+            >
+              <ArrowUpDown className="h-4 w-4" />
+              {sortOrder === 'asc' ? 'Asc' : 'Desc'}
+            </Button>
+          </div>
+          
+          {/* Clear Filters */}
+          {(searchTerm || storageClassFilter !== 'all') && (
+            <Button
+              onClick={() => {
+                setSearchTerm('');
+                setStorageClassFilter('all');
+              }}
+              variant="outline"
+              size="sm"
+            >
+              <X className="h-4 w-4 mr-1" />
+              Clear
+            </Button>
+          )}
+        </div>
+        
+        {/* Results Summary */}
+        <div className="flex items-center justify-between text-sm text-gray-600">
+          <span>
+            {filteredObjects.length} of {optimisticObjects.length} objects
+            {searchTerm && ` matching "${searchTerm}"`}
+            {storageClassFilter !== 'all' && ` in ${storageClassFilter}`}
+          </span>
+          <span>
+            Sorted by {sortBy} ({sortOrder === 'asc' ? 'ascending' : 'descending'})
+          </span>
+        </div>
+      </div>
+
       {/* Objects List */}
       <Card>
         <CardContent className="p-0">
           {filteredObjects.length === 0 ? (
             <div className="p-8 text-center">
-              <FolderOpen className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No objects found</h3>
-              <p className="text-gray-600">
-                {searchTerm ? 'No objects match your search criteria.' : 'This bucket is empty.'}
-              </p>
+              {searchTerm || storageClassFilter !== 'all' ? (
+                <>
+                  <Filter className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No objects match your filters</h3>
+                  <p className="text-gray-600 mb-4">
+                    Try adjusting your search terms or filters to find what you're looking for.
+                  </p>
+                  <div className="flex justify-center gap-2">
+                    <Button 
+                      onClick={() => setSearchTerm('')}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Clear Search
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        setSearchTerm('');
+                        setStorageClassFilter('all');
+                      }}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Clear All Filters
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <FolderOpen className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No objects found</h3>
+                  <p className="text-gray-600">
+                    This {currentPrefix ? 'folder' : 'bucket'} is empty.
+                  </p>
+                </>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
