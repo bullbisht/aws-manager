@@ -82,6 +82,10 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [renameObjectKey, setRenameObjectKey] = useState('');
   const [newObjectName, setNewObjectName] = useState('');
+  const [showRestoreDialog, setShowRestoreDialog] = useState(false);
+  const [restoreObjectKey, setRestoreObjectKey] = useState('');
+  const [restoreTier, setRestoreTier] = useState<'Standard' | 'Expedited' | 'Bulk'>('Standard');
+  const [restoreDays, setRestoreDays] = useState(1);
   const [isPending, startTransition] = useTransition();
   
   // Column resizing state
@@ -291,6 +295,56 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
       }
     } catch (err) {
       showError('Rename failed', 'Network error occurred');
+    }
+  };
+
+  const handleRestore = async (key: string) => {
+    try {
+      // Get current object to check if it's already being restored
+      const statusResult = await apiClient.getRestorationStatus(bucketName, key);
+      
+      if (statusResult.success && statusResult.data?.isRestoreInProgress) {
+        const { restoreExpiryDate } = statusResult.data;
+        const expiryDate = restoreExpiryDate ? new Date(restoreExpiryDate).toLocaleString() : 'Unknown';
+        showError('Already restoring', `${key} is already being restored. Expected completion: ${expiryDate}`);
+        return;
+      }
+
+      // Open the restore dialog
+      setRestoreObjectKey(key);
+      setRestoreTier('Standard');
+      setRestoreDays(1);
+      setShowRestoreDialog(true);
+    } catch (err) {
+      showError('Restoration failed', err instanceof Error ? err.message : 'Network error occurred');
+    }
+  };
+
+  const executeRestore = async () => {
+    try {
+      if (restoreDays < 1 || restoreDays > 30) {
+        showError('Invalid days', 'Please enter a number between 1 and 30');
+        return;
+      }
+
+      const result = await apiClient.restoreObject(bucketName, restoreObjectKey, restoreDays, restoreTier);
+      
+      if (result.success) {
+        success('Restoration initiated', `${restoreObjectKey} restoration has been started with ${restoreTier} tier for ${restoreDays} days`);
+        setShowRestoreDialog(false);
+        setRestoreObjectKey('');
+        setRestoreTier('Standard');
+        setRestoreDays(1);
+        
+        // Refresh objects to update restoration status
+        startTransition(() => {
+          fetchObjects();
+        });
+      } else {
+        showError('Restoration failed', result.error || 'Failed to initiate restoration');
+      }
+    } catch (err) {
+      showError('Restoration failed', err instanceof Error ? err.message : 'Network error occurred');
     }
   };
 
@@ -920,6 +974,18 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
+                          {/* Restore button for archived objects */}
+                          {(object.StorageClass === 'DEEP_ARCHIVE' || object.StorageClass === 'GLACIER') && !object.Key.endsWith('/') && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRestore(object.Key)}
+                              className="text-blue-600 hover:text-blue-700"
+                              title="Restore archived object"
+                            >
+                              <Database className="w-4 h-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -1004,6 +1070,214 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
                   Rename
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Restore Object Dialog */}
+      {showRestoreDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg mx-4">
+            <div className="flex items-center mb-4">
+              <Database className="w-6 h-6 text-blue-600 mr-3" />
+              <h3 className="text-lg font-semibold text-gray-900">
+                Restore Archived Object
+              </h3>
+            </div>
+            
+            <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-sm text-blue-800">
+                <strong>Object:</strong> {restoreObjectKey}
+              </p>
+              <p className="text-xs text-blue-600 mt-1">
+                This will temporarily restore the object from archive storage for the specified duration.
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              {/* Restoration Tier Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Restoration Tier
+                </label>
+                <div className="space-y-3">
+                  <div 
+                    className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                      restoreTier === 'Standard' 
+                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    onClick={() => setRestoreTier('Standard')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center">
+                          <input
+                            type="radio"
+                            id="tier-standard"
+                            name="restoreTier"
+                            checked={restoreTier === 'Standard'}
+                            onChange={() => setRestoreTier('Standard')}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                            aria-label="Standard restoration tier"
+                          />
+                          <label htmlFor="tier-standard" className="ml-3 text-sm font-medium text-gray-900">
+                            Standard
+                          </label>
+                          <Badge variant="outline" className="ml-2 text-xs">
+                            Recommended
+                          </Badge>
+                        </div>
+                        <p className="ml-7 text-xs text-gray-600">
+                          Balanced cost and speed - Good for most use cases
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-gray-900">3-5 hours</p>
+                        <p className="text-xs text-gray-500">Standard cost</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div 
+                    className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                      restoreTier === 'Expedited' 
+                        ? 'border-orange-500 bg-orange-50 ring-2 ring-orange-200' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    onClick={() => setRestoreTier('Expedited')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center">
+                          <input
+                            type="radio"
+                            id="tier-expedited"
+                            name="restoreTier"
+                            checked={restoreTier === 'Expedited'}
+                            onChange={() => setRestoreTier('Expedited')}
+                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300"
+                            aria-label="Expedited restoration tier"
+                          />
+                          <label htmlFor="tier-expedited" className="ml-3 text-sm font-medium text-gray-900">
+                            Expedited
+                          </label>
+                          <Badge variant="outline" className="ml-2 text-xs text-orange-600 border-orange-200">
+                            Fastest
+                          </Badge>
+                        </div>
+                        <p className="ml-7 text-xs text-gray-600">
+                          Fastest retrieval - When you need data urgently
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-gray-900">1-5 minutes</p>
+                        <p className="text-xs text-orange-600">Higher cost</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div 
+                    className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                      restoreTier === 'Bulk' 
+                        ? 'border-green-500 bg-green-50 ring-2 ring-green-200' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    onClick={() => setRestoreTier('Bulk')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center">
+                          <input
+                            type="radio"
+                            id="tier-bulk"
+                            name="restoreTier"
+                            checked={restoreTier === 'Bulk'}
+                            onChange={() => setRestoreTier('Bulk')}
+                            className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300"
+                            aria-label="Bulk restoration tier"
+                          />
+                          <label htmlFor="tier-bulk" className="ml-3 text-sm font-medium text-gray-900">
+                            Bulk
+                          </label>
+                          <Badge variant="outline" className="ml-2 text-xs text-green-600 border-green-200">
+                            Cheapest
+                          </Badge>
+                        </div>
+                        <p className="ml-7 text-xs text-gray-600">
+                          Lowest cost - Perfect for large datasets with flexible timing
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-gray-900">5-12 hours</p>
+                        <p className="text-xs text-green-600">Lowest cost</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Restoration Duration */}
+              <div>
+                <label htmlFor="restoreDays" className="block text-sm font-medium text-gray-700 mb-2">
+                  Restoration Duration
+                </label>
+                <div className="flex items-center space-x-3">
+                  <div className="flex-1">
+                    <Input
+                      id="restoreDays"
+                      type="number"
+                      min="1"
+                      max="30"
+                      value={restoreDays}
+                      onChange={(e) => setRestoreDays(parseInt(e.target.value) || 1)}
+                      className="w-full"
+                    />
+                  </div>
+                  <span className="text-sm text-gray-600">days</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Number of days to keep the restored copy available (1-30 days)
+                </p>
+              </div>
+
+              {/* Cost Warning */}
+              <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                <div className="flex items-start">
+                  <Calendar className="w-4 h-4 text-yellow-600 mr-2 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm text-yellow-800 font-medium">
+                      Restoration Costs Apply
+                    </p>
+                    <p className="text-xs text-yellow-700 mt-1">
+                      You will be charged for the restoration request and for storing the restored copy for the specified duration.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowRestoreDialog(false);
+                  setRestoreObjectKey('');
+                  setRestoreTier('Standard');
+                  setRestoreDays(1);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={executeRestore}
+                disabled={restoreDays < 1 || restoreDays > 30}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Database className="w-4 h-4 mr-2" />
+                Start Restoration
+              </Button>
             </div>
           </div>
         </div>
