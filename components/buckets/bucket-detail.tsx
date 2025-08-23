@@ -1111,7 +1111,7 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
                     onClick={() => setRestoreTier('Standard')}
                   >
                     <div className="flex items-center justify-between">
-                      <div>
+                      <div className="flex-1">
                         <div className="flex items-center">
                           <input
                             type="radio"
@@ -1132,6 +1132,14 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
                         <p className="ml-7 text-xs text-gray-600">
                           Balanced cost and speed - Good for most use cases
                         </p>
+                        <div className="ml-7 mt-1">
+                          <p className="text-xs text-blue-700 font-medium">
+                            GLACIER: $0.01/GB • DEEP_ARCHIVE: $0.02/GB
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Plus $0.0004 per request
+                          </p>
+                        </div>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-medium text-gray-900">3-5 hours</p>
@@ -1149,7 +1157,7 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
                     onClick={() => setRestoreTier('Expedited')}
                   >
                     <div className="flex items-center justify-between">
-                      <div>
+                      <div className="flex-1">
                         <div className="flex items-center">
                           <input
                             type="radio"
@@ -1170,6 +1178,14 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
                         <p className="ml-7 text-xs text-gray-600">
                           Fastest retrieval - When you need data urgently
                         </p>
+                        <div className="ml-7 mt-1">
+                          <p className="text-xs text-orange-700 font-medium">
+                            GLACIER: $0.03/GB • DEEP_ARCHIVE: Not available
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Plus $0.01 per request
+                          </p>
+                        </div>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-medium text-gray-900">1-5 minutes</p>
@@ -1187,7 +1203,7 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
                     onClick={() => setRestoreTier('Bulk')}
                   >
                     <div className="flex items-center justify-between">
-                      <div>
+                      <div className="flex-1">
                         <div className="flex items-center">
                           <input
                             type="radio"
@@ -1208,6 +1224,14 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
                         <p className="ml-7 text-xs text-gray-600">
                           Lowest cost - Perfect for large datasets with flexible timing
                         </p>
+                        <div className="ml-7 mt-1">
+                          <p className="text-xs text-green-700 font-medium">
+                            GLACIER: $0.0025/GB • DEEP_ARCHIVE: $0.0025/GB
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Plus $0.00025 per request
+                          </p>
+                        </div>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-medium text-gray-900">5-12 hours</p>
