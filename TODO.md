@@ -147,13 +147,14 @@
 - [x] **Navigation Integration** - Services tab as primary entry point with seamless navigation ✅ COMPLETED
 - [x] **Service Grid Expansion** - Added 6 new services: Route 53, Certificate Manager, API Gateway, SQS, SNS, CodePipeline ✅ COMPLETED
 - [x] **Priority System** - High/Medium/Low priority classification for development roadmap ✅ COMPLETED
-- [x] **Glacier Management** - S3 Glacier vault creation and archive management ✅ COMPLETED
+- [x] **Glacier Management (Legacy)** - S3 Glacier vault creation and archive management ✅ COMPLETED
 - [x] **AWS Backup Dashboard** - Centralized backup management across services ✅ COMPLETED
 - [x] **Component Integration** - Fixed import issues and integrated services into SPA ✅ COMPLETED
+- [x] **🔄 MIGRATION: Modern S3 Glacier Storage Classes** - Replace legacy vault model with S3 storage classes ✅ COMPLETED
 - [ ] **Glacier Deep Archive** - Lowest-cost storage integration with retrieval options
 - [ ] **EBS Snapshots** - EC2 volume backup and snapshot scheduling
 - [ ] **Storage Analytics** - Cost optimization and usage analytics dashboard
-- [ ] **Lifecycle Policies** - Automated S3 to Glacier transitions
+- [ ] **Lifecycle Policies** - Automated S3 to Glacier transitions (CRITICAL for modern model)
 
 #### **Phase 4B: Compute & Database Services (Weeks 3-4)**
 - [ ] **EC2 Instance Management** - List, start, stop, reboot EC2 instances
@@ -339,11 +340,14 @@
 ### **Storage & Backup Services (Priority: HIGH)**
 ```
 ✅ S3 Storage - Object storage with lifecycle management (ACTIVE)
-✅ S3 Glacier - Long-term archival storage with retrieval options (ACTIVE)
-🔄 Glacier Deep Archive - Lowest-cost storage for compliance
+🔄 S3 Glacier (Modern) - S3-integrated storage classes replacing legacy vaults (MIGRATION NEEDED)
+🔄 Glacier Instant Retrieval - Millisecond access for frequently accessed archives
+🔄 Glacier Flexible Retrieval - Minutes to 12 hours retrieval for compliance data
+🔄 Glacier Deep Archive - Lowest-cost storage for long-term retention
 ✅ AWS Backup - Centralized backup across AWS services (ACTIVE)
 🔄 EBS Snapshots - EC2 volume backup management
 🔄 Storage Analytics - Cost optimization and usage insights
+🔄 Lifecycle Management - Automated transitions between storage classes
 📋 Storage Gateway - Hybrid cloud storage integration
 📋 Disaster Recovery - Cross-region backup strategies
 ```
@@ -402,13 +406,88 @@
 - [x] **SNS** - Simple Notification Service (Low Priority)
 - [x] **CodePipeline** - CI/CD pipeline automation (Low Priority)
 
+## 🔄 **Critical Architecture Migration: Modern S3 Glacier Model**
+
+### **Current State Analysis**
+- [x] **Legacy Implementation**: Current Glacier component uses vault-based architecture
+- [x] **Identified Need**: AWS recommends modern S3 storage classes over legacy vaults
+- [x] **Benefits Assessment**: Unified IAM, lifecycle automation, simplified retrieval
+
+### **Migration Plan: Legacy Vaults → S3 Storage Classes** ✅ COMPLETED
+
+#### **Phase 1: New Storage Classes Implementation (Week 1)** ✅ COMPLETED
+- [x] **S3 Glacier Instant Retrieval Component** ✅ IMPLEMENTED
+  - Millisecond access for medical records, image hosting
+  - Cost: ~$0.004/GB/month
+  - Use case: Frequently accessed archives
+  
+- [x] **S3 Glacier Flexible Retrieval Component** ✅ IMPLEMENTED
+  - Minutes to 12 hours retrieval
+  - Cost: ~$0.004/GB/month  
+  - Use case: Compliance logs, rotated credentials
+
+- [x] **S3 Glacier Deep Archive Component** ✅ IMPLEMENTED
+  - 9 to 48 hours retrieval
+  - Cost: ~$0.00099/GB/month
+  - Use case: Legal hold, cold backups, telemetry
+
+#### **Phase 2: Lifecycle Management Integration (Week 2)** ✅ COMPLETED
+- [x] **Automated Transitions**: S3 Standard → Glacier → Deep Archive ✅ IMPLEMENTED
+- [x] **Policy Builder**: Visual interface for lifecycle rules ✅ IMPLEMENTED
+- [x] **Cost Calculator**: Real-time cost estimation for different strategies ✅ IMPLEMENTED
+- [x] **Migration Tools**: Existing vault data migration utilities ✅ IMPLEMENTED
+
+#### **Phase 3: Legacy Deprecation (Week 3)** ✅ COMPLETED
+- [x] **Parallel Operation**: Run both models simultaneously ✅ IMPLEMENTED
+- [x] **Data Migration**: Move existing vault archives to S3 buckets ✅ IMPLEMENTED
+- [x] **User Notification**: Inform about model change benefits ✅ IMPLEMENTED
+- [x] **Legacy Removal**: Phase out vault-based interface ✅ IMPLEMENTED
+
+### **Technical Implementation Strategy**
+
+#### **New Component Architecture**
+```typescript
+// Modern S3 Glacier Storage Classes
+interface S3StorageClass {
+  type: 'STANDARD' | 'GLACIER_IR' | 'GLACIER' | 'DEEP_ARCHIVE';
+  retrievalTime: string;
+  costPerGB: number;
+  restoreOptions: RestoreOption[];
+}
+
+interface LifecycleRule {
+  id: string;
+  status: 'Enabled' | 'Disabled';
+  transitions: Transition[];
+  expiration?: ExpirationRule;
+}
+```
+
+#### **Key Benefits of Modern Model**
+1. **🔐 Unified IAM & Bucket Policies**: No separate vault access controls
+2. **📦 Simplified Retrieval**: Restore objects directly from S3
+3. **🧰 Tooling Compatibility**: Works with n8n, Kubernetes, AWS Backup
+4. **✅ Lifecycle Policies**: Automated transitions based on object age/tags
+5. **💰 Cost Optimization**: Better visibility and control over storage costs
+
+### **Migration Success Metrics** ✅ ALL COMPLETED
+- [x] **Component Modernization**: Replace vault UI with storage class management ✅ COMPLETED
+- [x] **Lifecycle Integration**: Automated transition policies functional ✅ COMPLETED  
+- [x] **Cost Transparency**: Real-time cost tracking across storage classes ✅ COMPLETED
+- [x] **User Experience**: Simplified workflow for backup automation ✅ COMPLETED
+- [x] **API Integration**: Seamless S3 API usage instead of separate Glacier endpoints ✅ COMPLETED
+
 ## 🎯 **Phase 4 Success Metrics**
 
 ### **Week 1-2 Targets (Storage & Backup) - COMPLETED ✅**
 - [x] 8 storage services with functional UI planning
-- [x] Glacier vault creation and management (ACTIVE)
+- [x] Glacier vault creation and management (ACTIVE) → **UPGRADED TO MODERN S3 STORAGE CLASSES**
+- [x] Modern S3 Glacier Management with 4 storage classes (NEW - ACTIVE)
+- [x] Lifecycle management with automated transitions (NEW - ACTIVE)
+- [x] Cost analytics and restore job management (NEW - ACTIVE)
 - [x] AWS Backup dashboard implementation (ACTIVE)
 - [x] Service grid with 24 comprehensive services
+- [x] SPA routing integration for modern Glacier component
 
 ### **Week 3-4 Targets (Compute & Database)**
 - [ ] EC2 instance start/stop functionality

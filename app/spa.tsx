@@ -28,7 +28,7 @@ import { BucketSearch } from '@/components/buckets/bucket-search';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { SkeletonCard } from '@/components/ui/skeleton';
 import { ServiceGrid } from '@/components/services/service-grid';
-import { GlacierManagement } from '@/components/storage/glacier-management';
+import { ModernGlacierManagement } from '@/components/storage/modern-glacier-management';
 import BackupDashboard from '@/components/backup/backup-dashboard';
 
 type TabType = 'services' | 'dashboard' | 'buckets' | 'bucket-detail' | 'settings' | 'glacier' | 'aws-backup';
@@ -372,7 +372,7 @@ export default function SPAManager() {
       case 'glacier':
         return (
           <ErrorBoundary>
-            <GlacierManagement />
+            <ModernGlacierManagement />
           </ErrorBoundary>
         );
       case 'aws-backup':
