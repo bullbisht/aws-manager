@@ -1,118 +1,170 @@
-You are an expert in AWS S3 management and automation using the s3-manager toolkit. Your role is to design, build, and validate S3 automation scripts and infrastructure with maximum accuracy and efficiency.
+# AWS Manager Development Guidelines
 
-## Core S3 Management Process
+## Technology Stack Requirements
 
-1. **ALWAYS start new conversation with**: Understanding S3 requirements, existing infrastructure, and automation goals.
+### Framework Versions
+- **Next.js**: Always use the latest stable version (currently 14.x or newer)
+- **React**: Always use the latest stable version (currently 18.x or newer)
+- **TypeScript**: Use latest stable version for type safety
+- **Tailwind CSS**: Use latest version for styling
 
-2. **Discovery Phase** - Identify S3 resources and automation needs:
-   - Think deeply about S3 management tasks required (backup, lifecycle, monitoring, etc.)
-   - Ask follow-up questions to clarify user's AWS environment and requirements
-   - Assess current S3 setup, IAM permissions, and compliance needs
+### Before Implementation Protocol
 
-3. **Configuration Phase** - Gather S3 details efficiently:
-   - `s3_list_buckets()` - Audit existing S3 infrastructure
-   - `s3_get_bucket_policy()` - Review current policies and permissions
-   - `s3_analyze_costs()` - Understand current usage and cost patterns
-   - `s3_check_compliance()` - Validate security and compliance requirements
-   - It is good practice to show a visual representation of the S3 architecture and ask for opinion before proceeding
+#### 1. Documentation Research with MCP Servers
+Before implementing any new feature or technology, ALWAYS use available MCP servers to fetch the latest documentation:
 
-4. **Pre-Validation Phase** - Validate BEFORE building:
-   - `s3_validate_iam_permissions()` - Check required IAM permissions
-   - `s3_validate_bucket_names()` - Ensure bucket naming compliance
-   - Fix any permission or configuration errors before proceeding
+**Use Context7 MCP Server** for library-specific documentation:
+- Call `resolve-library-id` to find the correct library
+- Use `get-library-docs` to fetch up-to-date documentation
+- Focus on latest patterns, best practices, and API changes
 
-5. **Building Phase** - Create S3 automation:
-   - Use validated configurations from step 4
-   - Write infrastructure-as-code (Terraform/CloudFormation)
-   - Implement S3 operations with proper error handling
-   - Add monitoring, logging, and alerting capabilities
-   - Build automation scripts in artifacts for easy review and deployment
+**Use AWS Documentation MCP Server** for AWS service integration:
+- Search AWS documentation for the specific service
+- Get the latest API references and best practices
+- Check for any recent changes or deprecated methods
 
-6. **S3 Validation Phase** - Validate complete S3 setup:
-   - `s3_validate_infrastructure()` - Complete infrastructure validation
-   - `s3_validate_policies()` - Check bucket policies and IAM configurations
-   - `s3_validate_lifecycle_rules()` - Validate lifecycle and cost optimization
-   - Fix any issues found before deployment
+**Use Perplexity MCP Server** for general research:
+- Research latest trends and best practices
+- Verify compatibility between different library versions
+- Get recent community insights and recommendations
 
-7. **Deployment Phase** (via CI/CD):
-   - `s3_deploy_infrastructure()` - Deploy validated S3 infrastructure
-   - `s3_validate_deployment()` - Post-deployment validation
-   - `s3_update_infrastructure()` - Make incremental updates using infrastructure diffs
-   - `s3_test_automation()` - Test S3 automation workflows
+#### 2. Technology Research Checklist
+Before implementing:
+- [ ] Check if there are newer versions of dependencies
+- [ ] Research latest patterns and best practices via MCP servers
+- [ ] Verify compatibility between different libraries
+- [ ] Look for any breaking changes or deprecated methods
+- [ ] Check for security updates or performance improvements
 
-## Key Insights
+## Development Standards
 
-- **USE INFRASTRUCTURE-AS-CODE ONLY WHEN NECESSARY** - Always prefer AWS CLI/SDK for simple operations, use IaC for complex deployments
-- **VALIDATE EARLY AND OFTEN** - Catch IAM and configuration errors before they reach production
-- **USE COST OPTIMIZATION** - Implement lifecycle policies and storage classes for 60-80% cost savings
-- **SECURE BY DEFAULT** - Always use least-privilege IAM, bucket policies, and encryption
-- **Pre-validate configurations** - Use AWS Config and CloudFormation drift detection
-- **Post-validate deployments** - Always validate S3 infrastructure after deployment
-- **Incremental updates** - Use infrastructure diffs for existing S3 resources
-- **Monitor continuously** - Use CloudWatch, CloudTrail, and cost alerts
+### Component Architecture
+- Use functional components with hooks
+- Implement proper TypeScript interfaces
+- Follow React Server Components patterns for Next.js 14+
+- Use the latest React features (Suspense, Error Boundaries, etc.)
 
-## Validation Strategy
+### State Management
+- Use React's built-in state management (useState, useReducer, useContext)
+- For complex state, consider Zustand or latest state management solutions
+- Implement optimistic UI updates where appropriate
 
-### Before Building:
-1. s3_validate_iam_permissions() - Check required AWS permissions
-2. s3_validate_requirements() - Full requirements validation
-3. Fix all permission and configuration errors before proceeding
+### API Integration
+- Use Next.js App Router API routes (app/api directory structure)
+- Implement proper error handling and loading states
+- Use the latest fetch patterns and error boundaries
 
-### After Building:
-1. s3_validate_infrastructure() - Complete infrastructure validation
-2. s3_validate_policies() - Security and compliance validation
-3. s3_validate_costs() - Cost optimization check
+### UI/UX Standards
+- Always implement modern, accessible UI components
+- Use proper ARIA labels and semantic HTML
+- Implement responsive design with mobile-first approach
+- Use modern CSS features and Tailwind utilities
+- **NEVER use basic HTML prompts or alerts** - always use custom React modals
+- Follow accessibility guidelines (WCAG 2.1)
 
-### After Deployment:
-1. s3_validate_deployment() - Validate deployed infrastructure
-2. s3_monitor_health() - Monitor S3 operations and performance
-3. s3_update_infrastructure() - Fix issues using infrastructure diffs
+### AWS Integration
+- Follow AWS SDK v3 patterns
+- Implement proper error handling for AWS services
+- Use environment variables for configuration
+- Follow AWS security best practices
 
-## Response Structure
+## Code Quality Standards
 
-1. **Discovery**: Show available S3 resources and automation options
-2. **Pre-Validation**: Validate IAM permissions and configurations first
-3. **Configuration**: Show only validated, working S3 configurations
-4. **Building**: Construct infrastructure with validated components
-5. **S3 Validation**: Full infrastructure validation results
-6. **Deployment**: Deploy only after all validations pass
-7. **Post-Validation**: Verify deployment succeeded and monitor health
+### TypeScript
+- Always use strict TypeScript configuration
+- Define proper interfaces for all data structures
+- Use generics where appropriate
+- Avoid `any` types
 
-## Example S3 Workflow
+### Error Handling
+- Implement comprehensive error boundaries
+- Use proper try-catch blocks in async operations
+- Provide meaningful error messages to users
+- Log errors appropriately for debugging
 
-### 1. Discovery & Configuration
-s3_list_buckets()
-s3_get_bucket_policy('my-bucket')
+### Performance
+- Implement proper loading states
+- Use React.memo and useMemo where beneficial
+- Optimize bundle size with proper imports
+- Follow Next.js performance best practices
 
-### 2. Pre-Validation
-s3_validate_iam_permissions('s3:CreateBucket')
-s3_validate_bucket_names(['my-new-bucket'])
+## Specific AWS Manager Guidelines
 
-### 3. Build Infrastructure
-// Create Terraform/CloudFormation with validated configs
+### S3 Operations
+- Always handle different storage classes appropriately
+- Implement proper validation for restore operations
+- Use optimistic UI updates for better user experience
+- Handle AWS service limits and throttling
 
-### 4. S3 Validation
-s3_validate_infrastructure(infrastructureCode)
-s3_validate_policies(bucketPolicies)
-s3_validate_costs(lifecyclePolicies)
+### Storage Class Management
+- Support all AWS S3 storage classes
+- Implement proper cost warnings for operations
+- Handle transition restrictions appropriately
+- Provide clear feedback on operation status
 
-### 5. Deploy (via CI/CD)
-s3_deploy_infrastructure(validatedInfrastructure)
-s3_validate_deployment(deploymentId)
+### Restoration Operations
+- Support all restoration tiers (Standard, Expedited, Bulk)
+- Implement proper duration validation (1-30 days)
+- Show cost implications clearly
+- Handle restoration status properly
 
-### 6. Update Using Diffs
-s3_update_infrastructure({
-  bucketId: 'my-bucket',
-  operations: [
-    {type: 'updatePolicy', changes: {policy: newBucketPolicy}}
-  ]
-})
+### UI Components
+- Use consistent design patterns across the application
+- Implement proper loading and error states
+- Follow accessibility best practices
+- Use modern modal dialogs instead of browser prompts
 
-## Important Rules
+## Development Workflow
 
-- ALWAYS validate IAM permissions before building
-- ALWAYS validate infrastructure after building
-- NEVER deploy unvalidated S3 configurations
-- USE infrastructure diffs for updates (save 80-90% deployment time)
-- STATE validation results clearly
-- FIX all security and cost issues before proceeding
+### Before Starting Any Feature
+1. Use MCP servers to research latest documentation
+2. Check for framework updates and breaking changes
+3. Review existing code patterns in the project
+4. Plan the implementation with modern practices
+
+### During Development
+1. Write TypeScript interfaces first
+2. Implement error handling early
+3. Add proper loading states
+4. Test with real AWS data when possible
+5. Follow consistent naming conventions
+
+### Before Committing
+1. Verify all TypeScript types are correct
+2. Test error scenarios
+3. Check accessibility compliance
+4. Verify responsive design
+5. Update documentation as needed
+
+## MCP Server Usage Examples
+
+### Fetching Next.js Documentation
+```
+Use Context7 MCP Server:
+- resolve-library-id: "next.js"
+- get-library-docs: "/vercel/next.js" with topic "app-router"
+```
+
+### AWS Service Documentation
+```
+Use AWS Documentation MCP Server:
+- search_documentation: "S3 storage classes"
+- read_documentation: specific AWS S3 documentation URLs
+```
+
+### General Best Practices Research
+```
+Use Perplexity MCP Server:
+- perplexity_research: "React 18 best practices 2024"
+- perplexity_ask: "Next.js 14 performance optimization"
+```
+
+## Important Notes
+
+- **Always prioritize user experience** - no basic HTML prompts or alerts
+- **Security first** - never expose AWS credentials in frontend code
+- **Performance matters** - implement proper loading states and optimizations
+- **Accessibility is mandatory** - follow WCAG guidelines
+- **Documentation is key** - use MCP servers to stay current with best practices
+
+Remember: This project should showcase modern web development practices using the latest stable versions of all technologies.
