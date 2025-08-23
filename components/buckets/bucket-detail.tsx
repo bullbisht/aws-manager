@@ -785,23 +785,15 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
                       <div className={`p-4 border-r border-gray-100 text-sm text-gray-600 transition-all duration-200 ${
                         isOptimistic ? 'opacity-60' : ''
                       } ${isDeleting ? 'bg-red-50' : 'hover:bg-gray-50'}`}>
-                        {object.StorageClass && !object.Key.endsWith('/') ? (
+                        {object.StorageClass ? (
                           <StorageClassSelector
                             currentStorageClass={object.StorageClass}
                             onStorageClassChange={(newStorageClass) => handleStorageClassChange(object.Key, newStorageClass)}
                             disabled={isOptimistic || isDeleting}
                             objectKey={object.Key}
+                            isDirectory={object.Key.endsWith('/')}
+                            bucketName={bucketName}
                           />
-                        ) : object.StorageClass && object.Key.endsWith('/') ? (
-                          <div className="flex items-center gap-1">
-                            <Database className="h-3 w-3" />
-                            <Badge 
-                              variant="secondary" 
-                              className="text-xs px-2 py-0.5 bg-blue-100 text-blue-800 border-blue-200"
-                            >
-                              {object.StorageClass}
-                            </Badge>
-                          </div>
                         ) : null}
                       </div>
 

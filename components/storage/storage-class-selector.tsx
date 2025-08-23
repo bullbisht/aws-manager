@@ -151,7 +151,9 @@ export function StorageClassSelector({
   currentStorageClass, 
   onStorageClassChange, 
   disabled = false,
-  objectKey 
+  objectKey,
+  isDirectory = false,
+  bucketName 
 }: StorageClassSelectorProps) {
   const [showSelector, setShowSelector] = useState(false);
   
@@ -197,7 +199,17 @@ export function StorageClassSelector({
                 <div>
                   <CardTitle className="text-lg">Select Storage Class</CardTitle>
                   <CardDescription>
-                    Choose the optimal storage class for <span className="font-mono text-sm">{objectKey}</span>
+                    {isDirectory ? (
+                      <>
+                        Change storage class for <strong>all files</strong> in directory <span className="font-mono text-sm">{objectKey}</span>
+                        <br />
+                        <span className="text-sm text-orange-600 font-medium">⚠️ This will affect all files within this directory</span>
+                      </>
+                    ) : (
+                      <>
+                        Choose the optimal storage class for <span className="font-mono text-sm">{objectKey}</span>
+                      </>
+                    )}
                   </CardDescription>
                 </div>
                 <Button
@@ -266,12 +278,17 @@ export function StorageClassSelector({
                 ))}
               </div>
               
-              <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className={`mt-6 p-4 rounded-lg border ${isDirectory ? 'bg-orange-50 border-orange-200' : 'bg-blue-50 border-blue-200'}`}>
                 <div className="flex items-start gap-2">
-                  <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm text-blue-800">
+                  <Info className={`h-4 w-4 mt-0.5 flex-shrink-0 ${isDirectory ? 'text-orange-600' : 'text-blue-600'}`} />
+                  <div className={`text-sm ${isDirectory ? 'text-orange-800' : 'text-blue-800'}`}>
                     <p className="font-medium mb-1">Important Notes:</p>
                     <ul className="list-disc list-inside space-y-1 text-xs">
+                      {isDirectory && (
+                        <li className="font-medium text-orange-700">
+                          This operation will change the storage class for ALL files in the directory - this cannot be undone
+                        </li>
+                      )}
                       <li>Storage class changes may incur additional costs</li>
                       <li>Some transitions have minimum storage duration requirements</li>
                       <li>Retrieval costs apply for archived storage classes</li>
