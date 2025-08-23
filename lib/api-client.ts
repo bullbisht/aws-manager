@@ -196,6 +196,14 @@ class ApiClient {
     return this.request(`/api/s3/download?${params}`);
   }
 
+  async changeStorageClass(bucket: string, key: string, storageClass: string): Promise<ApiResponse<{ message: string }>> {
+    const encodedKey = encodeURIComponent(key);
+    return this.request(`/api/s3/objects/${bucket}/${encodedKey}/storage-class`, {
+      method: 'PUT',
+      body: JSON.stringify({ storageClass }),
+    });
+  }
+
   // S3 Upload API
   async getUploadUrl(
     bucket: string,
