@@ -56,6 +56,7 @@ export class S3ClientManager {
           sessionToken: user.awsCredentials.sessionToken,
         };
       }
+      // If no user credentials, let AWS SDK use default credential chain (SSO, environment variables, etc.)
 
       return this.getClient(config);
     } catch (error) {
@@ -80,6 +81,7 @@ export class S3ClientManager {
         sessionToken: user.awsCredentials.sessionToken,
       };
     }
+    // If no user credentials, let AWS SDK use default credential chain (SSO, environment variables, etc.)
 
     return this.getClient(config);
   }
@@ -100,8 +102,9 @@ export class S3ClientManager {
       // Use AWS profile
       clientConfig.credentials = fromIni({ profile: config.profile });
     } else {
-      // Use environment variables or default credential chain
-      clientConfig.credentials = fromEnv();
+      // Use default AWS credential chain (supports SSO, environment variables, IAM roles, etc.)
+      // Don't specify credentials - let AWS SDK use the default credential chain
+      // This supports: SSO, environment variables, shared credentials file, IAM roles, etc.
     }
 
     return new S3Client(clientConfig);
@@ -173,6 +176,7 @@ export function createS3ClientFromUser(user: any): S3Client {
       sessionToken: user.awsCredentials.sessionToken,
     };
   }
+  // If no user credentials, let AWS SDK use default credential chain (SSO, environment variables, etc.)
 
   return s3ClientManager.getClient(config);
 }

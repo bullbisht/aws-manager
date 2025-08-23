@@ -1,13 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { S3Client, ListObjectsV2Command, CopyObjectCommand } from '@aws-sdk/client-s3';
+import { ListObjectsV2Command, CopyObjectCommand } from '@aws-sdk/client-s3';
+import { verify } from 'jsonwebtoken';
+import { createS3ClientFromUser, getS3ErrorMessage } from '@/lib/s3-client';
 
-const s3Client = new S3Client({
-  region: process.env.AWS_REGION || 'us-east-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-});
+// Helper function to verify authentication
+async function verifyAuth(request: NextRequest) {
+  const token = request.cookies.get('auth-token')?.value;
+  if (!token) {
+    throw new Error('No authentication token');
+  }
+  
+  const decoded = verify(token, process.env.JWT_SECRET || 'dev-secret-key') as any;
+  return decoded;
+}
+
+// Helper function to validate storage class transitions
+function validateStorageClassTransition(currentStorageClass: string, newStorageClass: string): { 
+  isValid: boolean; 
+  errorMessage?: string; 
+  requiresRestore?: boolean;
+} {
+  // Normalize storage class names (handle undefined/null)
+  const current = currentStorageClass?.toUpperCase() || 'STANDARD';
+  const target = newStorageClass?.toUpperCase();
+
+  // Objects in GLACIER or DEEP_ARCHIVE cannot be directly transitioned
+  if (current === 'GLACIER' || current === 'DEEP_ARCHIVE') {
+    if (target !== current) {
+      return {
+        isValid: false,
+        requiresRestore: true,
+        errorMessage: `Objects in ${current} storage class must be restored before changing to ${target}. Please restore the object first, then change its storage class.`
+      };
+    }
+  }
+
+  // Objects in GLACIER_IR can transition to most classes except GLACIER/DEEP_ARCHIVE
+  if (current === 'GLACIER_IR') {
+    if (target === 'GLACIER' || target === 'DEEP_ARCHIVE') {
+      return {
+        isValid: false,
+        errorMessage: `Cannot transition from ${current} to ${target}. Use lifecycle policies for such transitions.`
+      };
+    }
+  }
+
+  // All other transitions are generally allowed
+  return { isValid: true };
+}
 
 const VALID_STORAGE_CLASSES = [
   'STANDARD',
@@ -22,10 +62,10 @@ const VALID_STORAGE_CLASSES = [
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { bucketName: string } }
+  { params }: { params: Promise<{ bucketName: string }> }
 ) {
   try {
-    const { bucketName } = params;
+    const { bucketName } = await params;
     const { prefix, storageClass } = await request.json();
 
     if (!prefix || !storageClass) {
@@ -42,6 +82,12 @@ export async function POST(
       );
     }
 
+    // Verify authentication and get user
+    const user = await verifyAuth(request);
+    
+    // Create S3 client using user's credentials
+    const s3Client = createS3ClientFromUser(user);
+
     // List all objects with the given prefix
     const listCommand = new ListObjectsV2Command({
       Bucket: bucketName,
@@ -53,7 +99,7 @@ export async function POST(
     const objects = listResponse.Contents || [];
 
     // Filter out directory markers (objects ending with '/')
-    const fileObjects = objects.filter(obj => obj.Key && !obj.Key.endsWith('/'));
+    const fileObjects = objects.filter((obj: any) => obj.Key && !obj.Key.endsWith('/'));
 
     if (fileObjects.length === 0) {
       return NextResponse.json(
@@ -69,11 +115,26 @@ export async function POST(
     for (let i = 0; i < fileObjects.length; i += BATCH_SIZE) {
       const batch = fileObjects.slice(i, i + BATCH_SIZE);
       
-      const batchPromises = batch.map(async (obj) => {
+      const batchPromises = batch.map(async (obj: any) => {
         try {
+          const currentStorageClass = obj.StorageClass || 'STANDARD';
+          
           // Skip if already in the target storage class
-          if (obj.StorageClass === storageClass) {
+          if (currentStorageClass === storageClass) {
             return { key: obj.Key, status: 'skipped', reason: 'Already in target storage class' };
+          }
+
+          // Validate the storage class transition
+          const validation = validateStorageClassTransition(currentStorageClass, storageClass);
+          
+          if (!validation.isValid) {
+            return { 
+              key: obj.Key, 
+              status: 'blocked', 
+              reason: validation.errorMessage,
+              requiresRestore: validation.requiresRestore,
+              currentStorageClass: currentStorageClass
+            };
           }
 
           const copyCommand = new CopyObjectCommand({
@@ -85,7 +146,7 @@ export async function POST(
           });
 
           await s3Client.send(copyCommand);
-          return { key: obj.Key, status: 'success' };
+          return { key: obj.Key, status: 'success', previousStorageClass: currentStorageClass };
         } catch (error) {
           console.error(`Failed to update storage class for ${obj.Key}:`, error);
           return { 
@@ -104,24 +165,37 @@ export async function POST(
     const successCount = results.filter(r => r.status === 'success').length;
     const errorCount = results.filter(r => r.status === 'error').length;
     const skippedCount = results.filter(r => r.status === 'skipped').length;
+    const blockedCount = results.filter(r => r.status === 'blocked').length;
 
     return NextResponse.json({
-      message: `Bulk storage class update completed`,
-      summary: {
-        total: fileObjects.length,
-        successful: successCount,
-        errors: errorCount,
-        skipped: skippedCount
-      },
-      details: results,
-      storageClass
+      success: true,
+      data: {
+        message: `Bulk storage class update completed`,
+        summary: {
+          total: fileObjects.length,
+          successful: successCount,
+          errors: errorCount,
+          skipped: skippedCount,
+          blocked: blockedCount
+        },
+        details: results,
+        storageClass
+      }
     });
 
   } catch (error) {
     console.error('Error updating bulk storage class:', error);
+    
+    const isAuthError = error instanceof Error && error.message === 'No authentication token';
+    const errorMessage = isAuthError ? 'Authentication required' : getS3ErrorMessage(error);
+    
     return NextResponse.json(
-      { error: 'Failed to update storage class', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      { 
+        success: false,
+        error: errorMessage, 
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: isAuthError ? 401 : 500 }
     );
   }
 }

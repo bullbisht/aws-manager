@@ -55,7 +55,7 @@ interface UploadProgress {
 
 interface OptimisticObject extends S3Object {
   _isOptimistic?: boolean;
-  _action?: 'create' | 'delete' | 'rename';
+  _action?: 'create' | 'delete' | 'rename' | 'updateStorageClass';
 }
 
 interface BucketDetailProps {
@@ -99,16 +99,28 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
   const tableRef = useRef<HTMLDivElement>(null);
   
   // Optimistic updates for smooth UX
-  const [optimisticObjects, addOptimisticObject] = useOptimistic(
+  const [optimisticObjects, setOptimisticObjects] = useOptimistic(
     objects,
-    (state: S3Object[], optimisticObject: OptimisticObject) => {
-      if (optimisticObject._action === 'delete') {
-        return state.filter(obj => obj.Key !== optimisticObject.Key);
+    (state: S3Object[], { action, payload }: { action: string; payload: any }) => {
+      switch (action) {
+        case 'delete':
+          return state.filter(obj => obj.Key !== payload.Key);
+        case 'create':
+          return [...state, payload as S3Object];
+        case 'updateStorageClass':
+          const { keys, newStorageClass } = payload;
+          return state.map(obj => {
+            const shouldUpdate = keys.some((key: string) => 
+              key.endsWith('/') ? obj.Key.startsWith(key) : obj.Key === key
+            );
+            if (shouldUpdate) {
+              return { ...obj, StorageClass: newStorageClass, _isOptimistic: true };
+            }
+            return obj;
+          });
+        default:
+          return state;
       }
-      if (optimisticObject._action === 'create') {
-        return [...state, optimisticObject as S3Object];
-      }
-      return state;
     }
   );
 
@@ -189,34 +201,27 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
 
   const handleDelete = async (key: string) => {
     if (!confirm(`Are you sure you want to delete ${key}?`)) return;
-    
-    // Optimistic update
-    addOptimisticObject({
-      Key: key,
-      LastModified: new Date(),
-      Size: 0,
-      StorageClass: '',
-      ETag: '',
-      _action: 'delete',
-      _isOptimistic: true
+
+    startTransition(() => {
+      setOptimisticObjects({
+        action: 'delete',
+        payload: { Key: key },
+      });
     });
-    
+
     try {
       const result = await apiClient.deleteObject(bucketName, key);
       if (result.success) {
         success('Object deleted', `${key} has been deleted successfully`);
-        startTransition(() => {
-          fetchObjects(); // Refresh the list
-        });
       } else {
-        // Revert optimistic update on error
-        setObjects(prev => prev.filter(obj => obj.Key !== key));
         showError('Delete failed', result.error || 'Failed to delete object');
       }
     } catch (err) {
-      // Revert optimistic update on error
-      setObjects(prev => prev.filter(obj => obj.Key !== key));
       showError('Delete failed', 'Network error occurred');
+    } finally {
+      startTransition(() => {
+        fetchObjects();
+      });
     }
   };
 
@@ -289,48 +294,83 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
   };
 
   const handleStorageClassChange = async (objectKey: string, newStorageClass: string) => {
+    console.log('🔄 Storage class change initiated:', {
+      objectKey,
+      currentStorageClass: objects.find(obj => obj.Key === objectKey)?.StorageClass,
+      newStorageClass,
+      bucketName,
+      timestamp: new Date().toISOString()
+    });
+
     const isDirectory = objectKey.endsWith('/');
-    
-    if (isDirectory) {
-      if (!confirm(`Are you sure you want to change the storage class of ALL files in the directory ${objectKey} to ${newStorageClass}? This operation cannot be undone.`)) {
-        return;
-      }
-      
-      try {
-        const result = await apiClient.changeBulkStorageClass(bucketName, objectKey, newStorageClass);
-        if (result.success) {
-          const { summary } = result.data || {};
+    const keysToUpdate = [objectKey];
+
+    const confirmationMessage = isDirectory
+      ? `Are you sure you want to change the storage class of ALL files in the directory ${objectKey} to ${newStorageClass}? This operation cannot be undone.`
+      : `Are you sure you want to change the storage class of ${objectKey} to ${newStorageClass}?`;
+
+    if (!confirm(confirmationMessage)) {
+      console.log('❌ Storage class change cancelled by user');
+      return;
+    }
+
+    console.log('✅ User confirmed storage class change');
+
+    // Optimistic update
+    startTransition(() => {
+      console.log('🔄 Applying optimistic update for UI');
+      setOptimisticObjects({
+        action: 'updateStorageClass',
+        payload: { keys: keysToUpdate, newStorageClass },
+      });
+    });
+
+    try {
+      console.log('📡 Making API call...', {
+        isDirectory,
+        apiMethod: isDirectory ? 'changeBulkStorageClass' : 'changeStorageClass'
+      });
+
+      const result = isDirectory
+        ? await apiClient.changeBulkStorageClass(bucketName, objectKey, newStorageClass)
+        : await apiClient.changeStorageClass(bucketName, objectKey, newStorageClass);
+
+      console.log('📡 API Response received:', {
+        success: result?.success,
+        data: result?.data,
+        error: result?.error,
+        fullResult: result
+      });
+
+      if (result && result.success) {
+        if (isDirectory) {
+          const { summary } = (result.data as { summary?: { successful?: number; errors?: number; skipped?: number } }) || {};
+          const successfulCount = summary?.successful || 0;
+          const errorCount = summary?.errors || 0;
+          const skippedCount = summary?.skipped || 0;
+          console.log('✅ Bulk storage class change successful:', { successfulCount, errorCount, skippedCount });
           success(
-            'Bulk storage class change completed', 
-            `Successfully changed ${summary?.successful || 0} files to ${newStorageClass}. ${summary?.errors || 0} errors, ${summary?.skipped || 0} skipped.`
+            'Bulk storage class change completed',
+            `Successfully changed ${successfulCount} files. ${errorCount} errors, ${skippedCount} skipped.`
           );
-          startTransition(() => {
-            fetchObjects(); // Refresh the list to show updated storage class
-          });
         } else {
-          showError('Bulk storage class change failed', result.error || 'Failed to change storage class');
-        }
-      } catch (err) {
-        showError('Bulk storage class change failed', 'Network error occurred');
-      }
-    } else {
-      if (!confirm(`Are you sure you want to change the storage class of ${objectKey} to ${newStorageClass}?`)) {
-        return;
-      }
-      
-      try {
-        const result = await apiClient.changeStorageClass(bucketName, objectKey, newStorageClass);
-        if (result.success) {
+          console.log('✅ Individual storage class change successful');
           success('Storage class changed', `${objectKey} storage class has been changed to ${newStorageClass}`);
-          startTransition(() => {
-            fetchObjects(); // Refresh the list to show updated storage class
-          });
-        } else {
-          showError('Storage class change failed', result.error || 'Failed to change storage class');
         }
-      } catch (err) {
-        showError('Storage class change failed', 'Network error occurred');
+      } else {
+        const errorMessage = result?.error || result?.details || 'Failed to change storage class';
+        console.error('❌ Storage class change failed:', { result, errorMessage });
+        showError('Storage class change failed', typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
       }
+    } catch (err) {
+      console.error('❌ Storage class change exception:', err);
+      showError('Storage class change failed', err instanceof Error ? err.message : 'Network error occurred');
+    } finally {
+      // Always refetch to get the true state from the server
+      console.log('🔄 Refetching objects to get latest state...');
+      startTransition(() => {
+        fetchObjects();
+      });
     }
   };
 
@@ -750,6 +790,7 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
                 {filteredObjects.map((object, index) => {
                   const isOptimistic = (object as OptimisticObject)._isOptimistic;
                   const isDeleting = (object as OptimisticObject)._action === 'delete';
+                  const isUpdating = (object as OptimisticObject)._action === 'updateStorageClass';
                   
                   return (
                     <div key={`${object.Key}-${index}`} className="contents">
@@ -784,7 +825,7 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
                       {/* Storage Class */}
                       <div className={`p-4 border-r border-gray-100 text-sm text-gray-600 transition-all duration-200 ${
                         isOptimistic ? 'opacity-60' : ''
-                      } ${isDeleting ? 'bg-red-50' : 'hover:bg-gray-50'}`}>
+                      } ${isDeleting ? 'bg-red-50' : ''} ${isUpdating ? 'bg-blue-50' : ''} hover:bg-gray-50`}>
                         {object.StorageClass ? (
                           <div
                             style={{

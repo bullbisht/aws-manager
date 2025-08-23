@@ -6,6 +6,7 @@ export interface ApiResponse<T = any> {
   data?: T;
   error?: string;
   details?: any;
+  needsCredentialSetup?: boolean;
 }
 
 export interface LoginCredentials {
