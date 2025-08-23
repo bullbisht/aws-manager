@@ -215,6 +215,19 @@ class ApiClient {
     });
   }
 
+  async changeBucketStorageClass(bucket: string, storageClass: string): Promise<ApiResponse<{ 
+    message: string; 
+    summary: { total: number; successful: number; errors: number; skipped: number };
+    details: any[];
+    totalObjects: number;
+    processedObjects: number;
+  }>> {
+    return this.request(`/api/s3/buckets/${bucket}/storage-class`, {
+      method: 'PUT',
+      body: JSON.stringify({ storageClass }),
+    });
+  }
+
   // S3 Upload API
   async getUploadUrl(
     bucket: string,

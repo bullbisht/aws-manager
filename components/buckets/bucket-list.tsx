@@ -14,6 +14,7 @@ import { BucketDeleteModal } from '@/components/ui/bucket-delete-modal';
 import { BucketInfoModal } from './bucket-info-modal';
 import Link from 'next/link';
 import { RefreshCw, Folder, Calendar, HardDrive, FileText, Settings, Trash2, Plus, Lock, Search, Filter, ArrowUpDown, ChevronDown, Database } from 'lucide-react';
+import { StorageClassSelector } from '@/components/storage/storage-class-selector';
 
 interface BucketListProps {
   onBucketSelect?: (bucketName: string) => void;
@@ -86,15 +87,37 @@ function UnauthenticatedState() {
   );
 }
 
-function BucketCard({ bucket, onBucketSelect, onDeleteBucket, onBucketInfo, countdownSeconds, onUndoDelete }: { 
+function BucketCard({ bucket, onBucketSelect, onDeleteBucket, onBucketInfo, countdownSeconds, onUndoDelete, onRefresh }: { 
   bucket: Bucket; 
   onBucketSelect?: (bucketName: string) => void;
   onDeleteBucket?: (bucketName: string) => void;
   onBucketInfo?: (bucketName: string) => void;
   countdownSeconds?: number;
   onUndoDelete?: (bucketName: string) => void;
+  onRefresh?: () => void;
 }) {
   const [isHovered, setIsHovered] = useState(false);
+  const { success, error: showError } = useToastHelpers();
+
+  const handleBucketStorageClassChange = async (newStorageClass: string) => {
+    try {
+      const result = await apiClient.changeBucketStorageClass(bucket.Name, newStorageClass);
+      
+      if (result.success && result.data) {
+        success(
+          'Bucket storage class changed', 
+          `${result.data.summary.successful} objects successfully changed to ${newStorageClass} storage class.${result.data.summary.errors > 0 ? ` ${result.data.summary.errors} errors occurred.` : ''}`
+        );
+        // Refresh the bucket list to show updated storage class
+        onRefresh?.();
+      } else {
+        showError('Storage class change failed', result.error || 'Failed to change bucket storage class');
+      }
+    } catch (error) {
+      console.error('Bucket storage class change error:', error);
+      showError('Network error', 'Failed to change bucket storage class');
+    }
+  };
 
   return (
     <Card 
@@ -159,15 +182,17 @@ function BucketCard({ bucket, onBucketSelect, onDeleteBucket, onBucketInfo, coun
                     year: new Date(bucket.CreationDate).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
                   })}
                 </div>
-                {bucket.StorageClass && (
+                {!bucket.pendingDeletion && (
                   <div className="flex items-center gap-1">
                     <Database className="h-3 w-3" />
-                    <Badge 
-                      variant="secondary" 
-                      className="text-xs px-2 py-0.5 bg-blue-100 text-blue-800 border-blue-200"
-                    >
-                      {bucket.StorageClass}
-                    </Badge>
+                    <StorageClassSelector
+                      currentStorageClass={bucket.StorageClass || 'STANDARD'}
+                      onStorageClassChange={handleBucketStorageClassChange}
+                      disabled={bucket.pendingDeletion}
+                      objectKey={`bucket-${bucket.Name}`}
+                      isDirectory={true}
+                      bucketName={bucket.Name}
+                    />
                   </div>
                 )}
               </div>
@@ -714,6 +739,7 @@ function BucketListContent({ onBucketSelect }: BucketListProps) {
               onBucketInfo={handleBucketInfo}
               countdownSeconds={deletionCountdowns.get(bucket.Name)}
               onUndoDelete={undoDelete}
+              onRefresh={handleRefresh}
             />
           ))
         )}

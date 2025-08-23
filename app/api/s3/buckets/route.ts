@@ -118,6 +118,8 @@ export async function GET(request: NextRequest) {
             Region: user.awsRegion,
             Objects: 0,
             Size: 'Access Denied',
+            StorageClass: 'STANDARD', // Default to STANDARD for inaccessible buckets
+            StorageClasses: {},
             error: 'Unable to access bucket metadata',
           };
         }
