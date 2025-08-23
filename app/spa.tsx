@@ -58,7 +58,11 @@ export default function SPAManager() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="container mx-auto px-4 py-16">
           <div className="text-center mb-16">
-            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
+            <h1 
+              className="text-4xl md:text-6xl font-bold text-gray-900 mb-6 cursor-pointer hover:text-blue-600 transition-colors"
+              onClick={() => window.location.href = '/'}
+              title="Go to Home"
+            >
               AWS Manager
             </h1>
             <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
@@ -323,7 +327,11 @@ export default function SPAManager() {
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
+            <div 
+              className="flex items-center space-x-4 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => handleTabChange('dashboard')}
+              title="Go to Home"
+            >
               <Database className="w-8 h-8 text-blue-600" />
               <h1 className="text-xl font-bold text-gray-900">AWS Manager</h1>
             </div>
