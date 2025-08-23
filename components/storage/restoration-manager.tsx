@@ -450,60 +450,6 @@ export const RestorationManager: React.FC<RestorationManagerProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Individual Restore Buttons for Archive Objects */}
-      {archiveObjects.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Archive size={20} />
-              Archive Objects
-            </CardTitle>
-            <CardDescription>
-              Objects in DEEP_ARCHIVE or GLACIER storage that can be restored
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {archiveObjects.map(obj => (
-                <div key={obj.Key} className="flex items-center justify-between p-2 border rounded">
-                  <div className="flex items-center gap-2">
-                    <Archive size={14} />
-                    <span className="text-sm truncate max-w-xs" title={obj.Key}>{obj.Key}</span>
-                    <Badge variant="outline" className="text-xs">{obj.StorageClass}</Badge>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {obj.restore?.isRestoreInProgress ? (
-                      obj.restore?.expectedCompletionTime ? (
-                        <CountdownTimer
-                          targetTime={obj.restore.expectedCompletionTime}
-                          onComplete={() => handleRestorationComplete(obj.Key)}
-                          objectKey={obj.Key}
-                        />
-                      ) : (
-                        <Badge variant="secondary" className="text-xs">
-                          <Loader2 size={12} className="animate-spin mr-1" />
-                          Restoring
-                        </Badge>
-                      )
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleSingleRestore(obj.Key)}
-                        disabled={isLoading}
-                        className="text-xs"
-                      >
-                        <Download size={12} className="mr-1" />
-                        Restore
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 };
