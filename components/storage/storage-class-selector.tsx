@@ -41,7 +41,7 @@ const STORAGE_CLASSES: StorageClass[] = [
     bgColor: 'bg-blue-50',
     borderColor: 'border-blue-200',
     cost: 'Higher',
-    costPerGB: '$0.023/month',
+    costPerGB: '$0.023/GB/Month',
     retrieval: 'Instant',
     useCase: 'Frequently accessed data'
   },
@@ -54,7 +54,7 @@ const STORAGE_CLASSES: StorageClass[] = [
     bgColor: 'bg-green-50',
     borderColor: 'border-green-200',
     cost: 'Lower',
-    costPerGB: '$0.0125/month',
+    costPerGB: '$0.0125/GB/Month',
     retrieval: 'Instant',
     useCase: 'Backup, disaster recovery'
   },
@@ -67,7 +67,7 @@ const STORAGE_CLASSES: StorageClass[] = [
     bgColor: 'bg-yellow-50',
     borderColor: 'border-yellow-200',
     cost: 'Lower',
-    costPerGB: '$0.01/month',
+    costPerGB: '$0.01/GB/Month',
     retrieval: 'Instant',
     useCase: 'Secondary backup copies'
   },
@@ -80,7 +80,7 @@ const STORAGE_CLASSES: StorageClass[] = [
     bgColor: 'bg-purple-50',
     borderColor: 'border-purple-200',
     cost: 'Optimized',
-    costPerGB: '$0.023-0.004/month',
+    costPerGB: '$0.023-0.004/GB/Month',
     retrieval: 'Variable',
     useCase: 'Unknown access patterns'
   },
@@ -93,7 +93,7 @@ const STORAGE_CLASSES: StorageClass[] = [
     bgColor: 'bg-cyan-50',
     borderColor: 'border-cyan-200',
     cost: 'Very Low',
-    costPerGB: '$0.004/month',
+    costPerGB: '$0.004/GB/Month',
     retrieval: '1-5 minutes',
     useCase: 'Long-term archives'
   },
@@ -106,7 +106,7 @@ const STORAGE_CLASSES: StorageClass[] = [
     bgColor: 'bg-indigo-50',
     borderColor: 'border-indigo-200',
     cost: 'Very Low',
-    costPerGB: '$0.004/month',
+    costPerGB: '$0.004/GB/Month',
     retrieval: 'Instant',
     useCase: 'Rarely accessed archives'
   },
@@ -119,7 +119,7 @@ const STORAGE_CLASSES: StorageClass[] = [
     bgColor: 'bg-gray-50',
     borderColor: 'border-gray-200',
     cost: 'Lowest',
-    costPerGB: '$0.00099/month',
+    costPerGB: '$0.00099/GB/Month',
     retrieval: '12+ hours',
     useCase: 'Long-term digital preservation'
   },
@@ -132,7 +132,7 @@ const STORAGE_CLASSES: StorageClass[] = [
     bgColor: 'bg-red-50',
     borderColor: 'border-red-200',
     cost: 'Variable',
-    costPerGB: '$0.024/month',
+    costPerGB: '$0.024/GB/Month',
     retrieval: 'Instant',
     useCase: 'Not recommended for new data'
   }
@@ -184,6 +184,7 @@ export function StorageClassSelector({
         size="sm"
         onClick={() => setShowSelector(true)}
         className={`h-auto p-1 text-xs border ${currentClass?.borderColor} ${currentClass?.bgColor} ${currentClass?.color} hover:opacity-80 transition-all`}
+        title=""
       >
         <div className="flex items-center gap-1.5">
           {currentClass?.icon}
