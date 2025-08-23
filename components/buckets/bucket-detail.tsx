@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { StorageClassSelector } from '@/components/storage/storage-class-selector';
+import { RestorationManager } from '@/components/storage/restoration-manager';
 
 interface S3Object {
   Key: string;
@@ -691,6 +692,20 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
           </span>
         </div>
       </div>
+
+      {/* Restoration Manager */}
+      <RestorationManager
+        bucketName={bucketName}
+        objects={filteredObjects}
+        selectedObjects={[]}
+        onRestoreComplete={() => {
+          // Refresh objects list after restoration
+          startTransition(() => {
+            fetchObjects();
+          });
+          success('Restoration initiated', 'Objects have been queued for restoration');
+        }}
+      />
 
       {/* Objects List */}
       <Card>

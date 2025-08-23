@@ -229,6 +229,54 @@ class ApiClient {
     });
   }
 
+  // S3 Restoration API for DEEP_ARCHIVE and GLACIER objects
+  async restoreObject(
+    bucket: string, 
+    key: string, 
+    days: number = 1, 
+    tier: 'Expedited' | 'Standard' | 'Bulk' = 'Standard', 
+    description?: string
+  ): Promise<ApiResponse<{ message: string; expectedCompletionTime?: string }>> {
+    const encodedKey = encodeURIComponent(key);
+    return this.request(`/api/s3/objects/${bucket}/${encodedKey}/restore`, {
+      method: 'POST',
+      body: JSON.stringify({ days, tier, description }),
+    });
+  }
+
+  async getRestorationStatus(bucket: string, key: string): Promise<ApiResponse<{
+    isRestoreInProgress: boolean;
+    restoreExpiryDate?: string;
+    expectedCompletionTime?: string;
+    tier?: string;
+    description?: string;
+  }>> {
+    const encodedKey = encodeURIComponent(key);
+    return this.request(`/api/s3/objects/${bucket}/${encodedKey}/restore`);
+  }
+
+  async bulkRestoreObjects(bucket: string, options: {
+    objects?: string[];
+    prefix?: string;
+    days?: number;
+    tier?: 'Expedited' | 'Standard' | 'Bulk';
+    description?: string;
+  }): Promise<ApiResponse<{
+    message: string;
+    summary: { total: number; successful: number; failed: number; skipped: number; alreadyInProgress: number };
+    results: Array<{
+      key: string;
+      status: 'success' | 'failed' | 'skipped' | 'alreadyInProgress';
+      error?: string;
+      expectedCompletionTime?: string;
+    }>;
+  }>> {
+    return this.request(`/api/s3/objects/${bucket}/bulk-restore`, {
+      method: 'POST',
+      body: JSON.stringify(options),
+    });
+  }
+
   // S3 Upload API
   async getUploadUrl(
     bucket: string,
