@@ -21,6 +21,8 @@ export function LoginForm({ className }: LoginFormProps) {
     deviceCode: string;
     ssoStartUrl: string;
     ssoRegion: string;
+    clientId: string;
+    clientSecret: string;
   } | null>(null);
   const { login, completeSSOLogin } = useAuth();
   const router = useRouter();
@@ -84,6 +86,8 @@ export function LoginForm({ className }: LoginFormProps) {
             deviceCode: result.deviceAuth.deviceCode,
             ssoStartUrl: credentials.ssoStartUrl || '',
             ssoRegion: credentials.ssoRegion || '',
+            clientId: result.deviceAuth.clientId,
+            clientSecret: result.deviceAuth.clientSecret,
           });
           return; // Don't redirect, show verification screen
         }

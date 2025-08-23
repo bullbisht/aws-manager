@@ -12,6 +12,8 @@ interface SSOVerificationProps {
     verificationUriComplete: string;
     expiresIn: number;
     interval: number;
+    clientId: string;
+    clientSecret: string;
   };
   deviceCode: string;
   ssoStartUrl: string;
@@ -31,7 +33,7 @@ export function SSOVerification({
   onCancel
 }: SSOVerificationProps) {
   const [timeLeft, setTimeLeft] = useState(deviceAuth.expiresIn);
-  const [polling, setPolling] = useState(true);
+  const [polling, setPolling] = useState(true); // Start polling immediately
   const [status, setStatus] = useState<'waiting' | 'expired' | 'denied' | 'error'>('waiting');
   const [copied, setCopied] = useState(false);
 
@@ -66,6 +68,8 @@ export function SSOVerification({
             deviceCode,
             ssoStartUrl,
             ssoRegion,
+            clientId: deviceAuth.clientId,
+            clientSecret: deviceAuth.clientSecret,
           }),
         });
 
@@ -96,7 +100,7 @@ export function SSOVerification({
     }, deviceAuth.interval * 1000);
 
     return () => clearInterval(pollInterval);
-  }, [polling, deviceCode, ssoStartUrl, ssoRegion, deviceAuth.interval, onSuccess, onError]);
+  }, [polling, deviceCode, ssoStartUrl, ssoRegion, deviceAuth.interval, deviceAuth.clientId, deviceAuth.clientSecret, onSuccess, onError]);
 
   const copyUserCode = async () => {
     try {
@@ -218,6 +222,11 @@ export function SSOVerification({
               <li>Complete the authorization in your AWS SSO portal</li>
               <li>Return to this page - you'll be automatically signed in</li>
             </ol>
+            <div className="mt-3 p-2 bg-blue-100 rounded text-blue-800">
+              <p className="text-xs">
+                <strong>Note:</strong> Your SSO username and available accounts/roles will be automatically detected after authorization.
+              </p>
+            </div>
           </div>
         )}
 

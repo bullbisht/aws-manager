@@ -7,6 +7,11 @@ const ssoPollSchema = z.object({
   deviceCode: z.string(),
   ssoStartUrl: z.string().url(),
   ssoRegion: z.string(),
+  clientId: z.string(),
+  clientSecret: z.string(),
+  accountId: z.string().optional(),
+  roleName: z.string().optional(),
+  username: z.string().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -14,75 +19,105 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = ssoPollSchema.parse(body);
 
-    const { createSSOService } = await import('@/lib/sso-service');
-    
-    const ssoService = createSSOService({
-      startUrl: validatedData.ssoStartUrl,
-      region: validatedData.ssoRegion,
-      clientName: 'AWS Manager App'
+    // Import AWS SDK classes directly for polling
+    const { SSOOIDCClient, CreateTokenCommand } = await import('@aws-sdk/client-sso-oidc');
+
+    const ssoClient = new SSOOIDCClient({
+      region: validatedData.ssoRegion
     });
 
     try {
-      // Poll for token completion
-      const token = await ssoService.pollForToken(validatedData.deviceCode, 5, 1); // Single attempt
-      const userInfo = await ssoService.getUserInfo(token.accessToken);
+      // Poll for token completion using the same client credentials that created the device code
+      const command = new CreateTokenCommand({
+        clientId: validatedData.clientId,
+        clientSecret: validatedData.clientSecret,
+        grantType: 'urn:ietf:params:oauth:grant-type:device_code',
+        deviceCode: validatedData.deviceCode
+      });
 
-      // Create user object for SSO
-      const user = {
-        id: userInfo.userId,
-        email: userInfo.email || 'sso-user@aws.com',
-        name: userInfo.userName,
-        authType: 'sso' as const,
-        awsRegion: validatedData.ssoRegion,
-        awsAccountId: userInfo.accountId,
-        permissions: ['s3:read', 's3:write', 's3:delete'],
-        ssoToken: {
-          accessToken: token.accessToken,
-          refreshToken: token.refreshToken,
-          expiresIn: token.expiresIn,
-          tokenType: token.tokenType
-        },
-      };
+      const tokenResponse = await ssoClient.send(command);
 
-      // Create JWT token with SSO information
-      const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'dev-secret-key');
-      const jwtToken = await new SignJWT({ 
-        userId: user.id, 
-        email: user.email,
-        name: user.name,
-        authType: user.authType,
-        awsRegion: user.awsRegion,
-        awsAccountId: user.awsAccountId,
-        permissions: user.permissions,
-        ssoToken: user.ssoToken
-      })
-        .setProtectedHeader({ alg: 'HS256' })
-        .setIssuedAt()
-        .setExpirationTime('24h')
-        .sign(secret);
+      if (tokenResponse.accessToken) {
+        // Get user info using the SSO service
+        const { createSSOService } = await import('@/lib/sso-service');
+        const ssoService = createSSOService({
+          startUrl: validatedData.ssoStartUrl,
+          region: validatedData.ssoRegion,
+          clientName: 'AWS Manager App'
+        });
 
-      // Set secure HTTP-only cookie
-      const response = NextResponse.json({
-        success: true,
-        user: {
-          id: user.id,
+        const token = {
+          accessToken: tokenResponse.accessToken,
+          refreshToken: tokenResponse.refreshToken,
+          expiresIn: tokenResponse.expiresIn || 3600,
+          tokenType: tokenResponse.tokenType || 'Bearer'
+        };
+
+        const userInfo = await ssoService.getUserInfo(
+          token.accessToken,
+          validatedData.accountId,
+          validatedData.roleName
+        );
+
+        // Create user object for SSO
+        const user = {
+          id: userInfo.userId,
+          email: userInfo.email || 'sso-user@aws.com',
+          name: userInfo.userName,
+          authType: 'sso' as const,
+          awsRegion: validatedData.ssoRegion,
+          awsAccountId: userInfo.accountId,
+          permissions: ['s3:read', 's3:write', 's3:delete'],
+          awsCredentials: userInfo.awsCredentials,
+          ssoToken: {
+            accessToken: token.accessToken,
+            refreshToken: token.refreshToken,
+            expiresIn: token.expiresIn,
+            tokenType: token.tokenType
+          },
+        };
+
+        // Create JWT token with SSO information
+        const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'dev-secret-key');
+        const jwtToken = await new SignJWT({
+          userId: user.id,
           email: user.email,
           name: user.name,
           authType: user.authType,
           awsRegion: user.awsRegion,
           awsAccountId: user.awsAccountId,
-        },
-      });
+          permissions: user.permissions,
+          awsCredentials: user.awsCredentials,
+          ssoToken: user.ssoToken
+        })
+          .setProtectedHeader({ alg: 'HS256' })
+          .setIssuedAt()
+          .setExpirationTime('24h')
+          .sign(secret);
 
-      response.cookies.set('auth-token', jwtToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 24 * 60 * 60, // 24 hours
-        path: '/',
-      });
+        // Set secure HTTP-only cookie
+        const response = NextResponse.json({
+          success: true,
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            authType: user.authType,
+            awsRegion: user.awsRegion,
+            awsAccountId: user.awsAccountId,
+          },
+        });
 
-      return response;
+        response.cookies.set('auth-token', jwtToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 24 * 60 * 60, // 24 hours
+          path: '/',
+        });
+
+        return response;
+      }
 
     } catch (pollError: any) {
       if (pollError.message.includes('pending') || pollError.name === 'AuthorizationPendingException') {

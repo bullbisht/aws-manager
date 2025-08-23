@@ -97,10 +97,10 @@ class ApiClient {
   }
 
   // SSO Polling API
-  async pollSSOToken(deviceCode: string, userCode: string): Promise<ApiResponse<{ user: User }>> {
+  async pollSSOToken(deviceCode: string, ssoStartUrl: string, ssoRegion: string): Promise<ApiResponse<{ user: User }>> {
     return this.request('/api/auth/sso-poll', {
       method: 'POST',
-      body: JSON.stringify({ deviceCode, userCode }),
+      body: JSON.stringify({ deviceCode, ssoStartUrl, ssoRegion }),
     });
   }
 

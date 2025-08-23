@@ -114,22 +114,27 @@ export async function POST(request: NextRequest) {
         });
 
         const { deviceAuth, pollForCompletion } = await ssoService.authenticate();
-        
+
+        // Get the client info to include in the response
+        const clientInfo = await ssoService.registerClient();
+
         // Store device auth info in session/cache for polling
         // For simplicity, we'll return the device auth info to the client
         return NextResponse.json({
           success: true,
-          requiresDeviceAuth: true,
+          needsDeviceAuthorization: true,
           deviceAuth: {
             userCode: deviceAuth.userCode,
             verificationUri: deviceAuth.verificationUri,
             verificationUriComplete: deviceAuth.verificationUriComplete,
             expiresIn: deviceAuth.expiresIn,
-            interval: deviceAuth.interval
+            interval: deviceAuth.interval,
+            deviceCode: deviceAuth.deviceCode,
+            clientId: clientInfo.clientId,
+            clientSecret: clientInfo.clientSecret
           },
           // Return a polling endpoint URL
-          pollEndpoint: '/api/auth/sso-poll',
-          deviceCode: deviceAuth.deviceCode // This should be stored securely in a real app
+          pollEndpoint: '/api/auth/sso-poll'
         });
 
       } catch (ssoError: any) {

@@ -7,6 +7,7 @@ import {
   type StartDeviceAuthorizationCommandOutput,
   type CreateTokenCommandOutput
 } from '@aws-sdk/client-sso-oidc';
+import { SSOClient, GetRoleCredentialsCommand, ListAccountsCommand, ListAccountRolesCommand } from '@aws-sdk/client-sso';
 import { STSClient, GetCallerIdentityCommand } from '@aws-sdk/client-sts';
 
 export interface SSOConfiguration {
@@ -36,6 +37,12 @@ export interface SSOUserInfo {
   accountId: string;
   userName: string;
   email?: string;
+  roleName?: string;
+  awsCredentials?: {
+    accessKeyId: string;
+    secretAccessKey: string;
+    sessionToken: string;
+  };
 }
 
 export class SSOService {
@@ -156,17 +163,118 @@ export class SSOService {
   }
 
   /**
-   * Get user information - simplified approach for SSO
+   * Get available accounts for the user
    */
-  async getUserInfo(accessToken: string): Promise<SSOUserInfo> {
-    // For SSO, we'll create a simplified user info
-    // In a production environment, you would use the SSO token to get actual user details
-    return {
-      userId: 'sso_user_' + Date.now(),
-      accountId: 'sso_account',
-      userName: 'SSO User',
-      email: 'sso-user@aws.com'
-    };
+  async getAvailableAccounts(accessToken: string): Promise<Array<{accountId: string, accountName: string, emailAddress: string}>> {
+    const ssoClient = new SSOClient({ region: this.config.region });
+    
+    try {
+      const command = new ListAccountsCommand({
+        accessToken
+      });
+      const response = await ssoClient.send(command);
+      
+      return (response.accountList || []).map(account => ({
+        accountId: account.accountId!,
+        accountName: account.accountName!,
+        emailAddress: account.emailAddress!
+      }));
+    } catch (error) {
+      console.error('Failed to get available accounts:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get available roles for a specific account
+   */
+  async getAvailableRoles(accessToken: string, accountId: string): Promise<Array<{roleName: string}>> {
+    const ssoClient = new SSOClient({ region: this.config.region });
+    
+    try {
+      const command = new ListAccountRolesCommand({
+        accessToken,
+        accountId
+      });
+      const response = await ssoClient.send(command);
+      
+      return (response.roleList || []).map(role => ({
+        roleName: role.roleName!
+      }));
+    } catch (error) {
+      console.error('Failed to get available roles:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get user information and AWS credentials from SSO
+   */
+  async getUserInfo(accessToken: string, accountId?: string, roleName?: string): Promise<SSOUserInfo> {
+    try {
+      const ssoClient = new SSOClient({ region: this.config.region });
+
+      // Get available accounts to determine user info
+      const accounts = await this.getAvailableAccounts(accessToken);
+      
+      // Use the first account if none specified, or find the specified account
+      let selectedAccount = accounts[0];
+      if (accountId) {
+        selectedAccount = accounts.find(acc => acc.accountId === accountId) || selectedAccount;
+      }
+
+      // If we have an account but no role specified, get the first available role
+      let selectedRole = roleName;
+      if (selectedAccount && !selectedRole) {
+        const roles = await this.getAvailableRoles(accessToken, selectedAccount.accountId);
+        selectedRole = roles[0]?.roleName;
+      }
+
+      // Get AWS credentials if we have both account and role
+      let awsCredentials;
+      if (selectedAccount && selectedRole) {
+        try {
+          const credentialsCommand = new GetRoleCredentialsCommand({
+            accountId: selectedAccount.accountId,
+            roleName: selectedRole,
+            accessToken
+          });
+          const credentialsResponse = await ssoClient.send(credentialsCommand);
+
+          if (credentialsResponse.roleCredentials) {
+            awsCredentials = {
+              accessKeyId: credentialsResponse.roleCredentials.accessKeyId!,
+              secretAccessKey: credentialsResponse.roleCredentials.secretAccessKey!,
+              sessionToken: credentialsResponse.roleCredentials.sessionToken!
+            };
+          }
+        } catch (credError) {
+          console.warn('Failed to get role credentials:', credError);
+        }
+      }
+
+      // Extract username from email address
+      const userName = selectedAccount?.emailAddress?.split('@')[0] || 'sso-user';
+
+      return {
+        userId: `sso_${userName}_${Date.now()}`,
+        accountId: selectedAccount?.accountId || 'unknown',
+        userName: userName,
+        email: selectedAccount?.emailAddress,
+        roleName: selectedRole,
+        awsCredentials
+      };
+    } catch (error) {
+      console.warn('Failed to get SSO user info:', error);
+      // Fallback to basic user info
+      return {
+        userId: 'sso_user_' + Date.now(),
+        accountId: 'unknown',
+        userName: 'SSO User',
+        email: 'sso-user@aws.com',
+        roleName: undefined,
+      };
+    }
   }
 
   /**
