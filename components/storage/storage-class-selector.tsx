@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToastHelpers } from '@/components/ui/toast';
 import { 
   Database, 
   Snowflake, 
@@ -156,6 +157,7 @@ export function StorageClassSelector({
   bucketName 
 }: StorageClassSelectorProps) {
   const [showSelector, setShowSelector] = useState(false);
+  const { error: showError } = useToastHelpers();
   
   const currentClass = STORAGE_CLASSES.find(sc => sc.value === currentStorageClass);
   
@@ -170,8 +172,36 @@ export function StorageClassSelector({
     );
   }
 
+  // Helper function to check if a storage class transition is valid
+  const isTransitionValid = (from: string, to: string): boolean => {
+    // DEEP_ARCHIVE can only transition to itself (no changes allowed)
+    if (from === 'DEEP_ARCHIVE' && to !== 'DEEP_ARCHIVE') {
+      return false;
+    }
+    return true;
+  };
+
+  // Helper function to get transition warning message
+  const getTransitionWarning = (from: string, to: string): string | null => {
+    if (from === 'DEEP_ARCHIVE' && to !== 'DEEP_ARCHIVE') {
+      return 'Objects in DEEP_ARCHIVE must be restored before changing storage classes';
+    }
+    return null;
+  };
+
   const handleSelect = (storageClass: StorageClass) => {
     if (storageClass.value !== currentStorageClass) {
+      // Check for invalid transitions
+      if (!isTransitionValid(currentStorageClass, storageClass.value)) {
+        const warning = getTransitionWarning(currentStorageClass, storageClass.value);
+        showError(
+          'Invalid Storage Class Transition',
+          `Cannot change from ${currentClass?.name || currentStorageClass} to ${storageClass.name}. ${warning}. To change this object's storage class: 1) First restore the object from DEEP_ARCHIVE, 2) Wait for restoration to complete (12+ hours), 3) Then change the storage class to ${storageClass.name}. This is an AWS S3 limitation.`
+        );
+        setShowSelector(false);
+        return;
+      }
+      
       onStorageClassChange(storageClass.value);
     }
     setShowSelector(false);

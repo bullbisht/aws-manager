@@ -343,6 +343,25 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
       });
 
       if (result && result.success) {
+        // Update the actual objects state to persist the change
+        setObjects(prevObjects => {
+          if (isDirectory) {
+            // For directory changes, update all objects that start with the prefix
+            return prevObjects.map(obj => 
+              obj.Key.startsWith(objectKey) 
+                ? { ...obj, StorageClass: newStorageClass }
+                : obj
+            );
+          } else {
+            // For individual file changes, update just the specific object
+            return prevObjects.map(obj => 
+              obj.Key === objectKey 
+                ? { ...obj, StorageClass: newStorageClass }
+                : obj
+            );
+          }
+        });
+
         if (isDirectory) {
           const { summary } = (result.data as { summary?: { successful?: number; errors?: number; skipped?: number } }) || {};
           const successfulCount = summary?.successful || 0;
@@ -358,19 +377,29 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
           success('Storage class changed', `${objectKey} storage class has been changed to ${newStorageClass}`);
         }
       } else {
+        // Revert optimistic update on error
+        startTransition(() => {
+          setOptimisticObjects({
+            action: 'updateStorageClass',
+            payload: { keys: keysToUpdate, newStorageClass: objects.find(obj => obj.Key === objectKey)?.StorageClass || 'STANDARD' },
+          });
+        });
+
         const errorMessage = result?.error || result?.details || 'Failed to change storage class';
         console.error('❌ Storage class change failed:', { result, errorMessage });
         showError('Storage class change failed', typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
       }
     } catch (err) {
+      // Revert optimistic update on error
+      startTransition(() => {
+        setOptimisticObjects({
+          action: 'updateStorageClass',
+          payload: { keys: keysToUpdate, newStorageClass: objects.find(obj => obj.Key === objectKey)?.StorageClass || 'STANDARD' },
+        });
+      });
+
       console.error('❌ Storage class change exception:', err);
       showError('Storage class change failed', err instanceof Error ? err.message : 'Network error occurred');
-    } finally {
-      // Always refetch to get the true state from the server
-      console.log('🔄 Refetching objects to get latest state...');
-      startTransition(() => {
-        fetchObjects();
-      });
     }
   };
 

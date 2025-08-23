@@ -167,10 +167,65 @@ export async function POST(
     const skippedCount = results.filter(r => r.status === 'skipped').length;
     const blockedCount = results.filter(r => r.status === 'blocked').length;
 
+    // Check if all operations were blocked or failed
+    const hasAnySuccess = successCount > 0;
+    const allBlocked = blockedCount === fileObjects.length;
+    const allBlockedOrSkipped = (blockedCount + skippedCount) === fileObjects.length;
+
+    // If all operations were blocked due to invalid transitions, return error
+    if (allBlocked) {
+      const blockedReasons = results
+        .filter(r => r.status === 'blocked')
+        .map(r => r.reason)
+        .filter((value, index, self) => self.indexOf(value) === index); // Get unique reasons
+
+      return NextResponse.json({
+        success: false,
+        error: 'All storage class transitions were blocked',
+        details: blockedReasons.length === 1 
+          ? blockedReasons[0] 
+          : `Multiple issues found: ${blockedReasons.join('; ')}`,
+        data: {
+          summary: {
+            total: fileObjects.length,
+            successful: successCount,
+            errors: errorCount,
+            skipped: skippedCount,
+            blocked: blockedCount
+          },
+          details: results,
+          storageClass
+        }
+      }, { status: 400 });
+    }
+
+    // If all operations were either blocked or skipped (no actual changes), return partial success
+    if (allBlockedOrSkipped && successCount === 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'No storage class changes were made',
+        details: 'All files were either already in the target storage class or blocked from transitioning',
+        data: {
+          summary: {
+            total: fileObjects.length,
+            successful: successCount,
+            errors: errorCount,
+            skipped: skippedCount,
+            blocked: blockedCount
+          },
+          details: results,
+          storageClass
+        }
+      }, { status: 400 });
+    }
+
+    // Return success only if at least some operations succeeded
     return NextResponse.json({
-      success: true,
+      success: hasAnySuccess,
       data: {
-        message: `Bulk storage class update completed`,
+        message: hasAnySuccess 
+          ? `Bulk storage class update completed` 
+          : 'No storage class changes were made',
         summary: {
           total: fileObjects.length,
           successful: successCount,

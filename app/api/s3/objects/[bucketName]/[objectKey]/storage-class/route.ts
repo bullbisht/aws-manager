@@ -51,10 +51,10 @@ function validateStorageClassTransition(currentStorageClass: string, newStorageC
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { bucketName: string; objectKey: string } }
+  { params }: { params: Promise<{ bucketName: string; objectKey: string }> }
 ) {
   try {
-    const { bucketName, objectKey } = params;
+    const { bucketName, objectKey } = await params;
     const { storageClass } = await request.json();
 
     // Decode the object key in case it contains special characters
