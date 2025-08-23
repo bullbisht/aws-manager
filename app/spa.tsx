@@ -34,8 +34,10 @@ import { EC2Management } from '@/components/compute/ec2-management';
 import { LambdaManagement } from '@/components/compute/lambda-management';
 import { RDSManagement } from '@/components/database/rds-management';
 import { EBSSnapshotsManagement } from '@/components/storage/ebs-snapshots';
+import { StorageAnalytics } from '@/components/storage/storage-analytics';
+import { IAMManagement } from '@/components/security/iam-management';
 
-type TabType = 'services' | 'dashboard' | 'buckets' | 'bucket-detail' | 'settings' | 'glacier' | 'aws-backup' | 's3-management' | 'ec2' | 'lambda' | 'rds' | 'ebs-snapshots';
+type TabType = 'services' | 'dashboard' | 'buckets' | 'bucket-detail' | 'settings' | 'glacier' | 'aws-backup' | 's3-management' | 'ec2' | 'lambda' | 'rds' | 'ebs-snapshots' | 'storage-analytics' | 'iam';
 
 interface SPAState {
   activeTab: TabType;
@@ -167,11 +169,15 @@ export default function SPAManager() {
       case 'dynamodb':
       case 'vpc':
       case 'cloudfront':
-      case 'iam':
       case 'cloudwatch':
       case 'eks':
       case 'datasync':
       case 'storage-analytics':
+        setState(prev => ({ ...prev, activeTab: 'storage-analytics' }));
+        break;
+      case 'iam':
+        setState(prev => ({ ...prev, activeTab: 'iam' }));
+        break;
       case 'disaster-recovery':
       case 'route53':
       case 'certificate-manager':
@@ -487,6 +493,18 @@ export default function SPAManager() {
         return (
           <ErrorBoundary>
             <EBSSnapshotsManagement />
+          </ErrorBoundary>
+        );
+      case 'storage-analytics':
+        return (
+          <ErrorBoundary>
+            <StorageAnalytics />
+          </ErrorBoundary>
+        );
+      case 'iam':
+        return (
+          <ErrorBoundary>
+            <IAMManagement />
           </ErrorBoundary>
         );
       case 'settings':

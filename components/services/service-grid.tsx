@@ -203,8 +203,9 @@ export function ServiceGrid({ onServiceSelect }: ServiceGridProps) {
       title: 'IAM Management',
       description: 'Identity and access management for AWS resources',
       icon: Lock,
-      status: 'planned' as const,
+      status: 'active' as const,
       category: 'Networking & Security',
+      stats: 'Just Activated',
       priority: 'medium' as const
     },
     {
@@ -241,8 +242,9 @@ export function ServiceGrid({ onServiceSelect }: ServiceGridProps) {
       title: 'Storage Analytics',
       description: 'Cost optimization and usage analytics across storage services',
       icon: BarChart3,
-      status: 'coming-soon' as const,
+      status: 'active' as const,
       category: 'Storage & Backup',
+      stats: 'Just Activated',
       priority: 'medium' as const
     },
     {
