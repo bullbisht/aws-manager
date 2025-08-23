@@ -180,7 +180,11 @@ export function StorageClassSelector({
   return (
     <div className="relative">
       <span
-        onClick={() => setShowSelector(true)}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setShowSelector(true);
+        }}
         className={`inline-flex items-center gap-1.5 h-auto p-1 text-xs border rounded cursor-pointer ${currentClass?.borderColor} ${currentClass?.bgColor} ${currentClass?.color} hover:opacity-80 transition-all`}
         style={{ 
           WebkitUserSelect: 'none',
@@ -191,8 +195,24 @@ export function StorageClassSelector({
         onMouseEnter={(e) => {
           e.preventDefault();
           e.stopPropagation();
+          // Remove any title attribute that might cause tooltips
+          e.currentTarget.removeAttribute('title');
+          e.currentTarget.removeAttribute('aria-label');
+          e.currentTarget.removeAttribute('data-tooltip');
         }}
         onMouseLeave={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onMouseMove={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onMouseDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onMouseUp={(e) => {
           e.preventDefault();
           e.stopPropagation();
         }}
@@ -203,13 +223,26 @@ export function StorageClassSelector({
         onFocus={(e) => {
           e.preventDefault();
           e.stopPropagation();
+          // Remove any accessibility attributes that might trigger tooltips
+          e.currentTarget.removeAttribute('title');
+          e.currentTarget.removeAttribute('aria-describedby');
         }}
         onBlur={(e) => {
           e.preventDefault();
           e.stopPropagation();
         }}
+        onTouchStart={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onTouchEnd={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
         role="button"
         tabIndex={0}
+        aria-label=""
+        title=""
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
@@ -266,7 +299,11 @@ export function StorageClassSelector({
                         ? `${storageClass.borderColor} ${storageClass.bgColor} shadow-md`
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
-                    onClick={() => handleSelect(storageClass)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleSelect(storageClass);
+                    }}
                     style={{
                       userSelect: 'none',
                       WebkitUserSelect: 'none'
@@ -274,8 +311,25 @@ export function StorageClassSelector({
                     onMouseEnter={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      // Remove any tooltip attributes
+                      e.currentTarget.removeAttribute('title');
+                      e.currentTarget.removeAttribute('aria-label');
+                      e.currentTarget.removeAttribute('data-tooltip');
+                      e.currentTarget.removeAttribute('aria-describedby');
                     }}
                     onMouseLeave={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onMouseMove={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onMouseUp={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
                     }}
@@ -283,6 +337,29 @@ export function StorageClassSelector({
                       e.preventDefault();
                       e.stopPropagation();
                     }}
+                    onFocus={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      // Remove accessibility attributes that might trigger tooltips
+                      e.currentTarget.removeAttribute('title');
+                      e.currentTarget.removeAttribute('aria-describedby');
+                    }}
+                    onBlur={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onTouchEnd={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    title=""
+                    aria-label=""
+                    role="button"
+                    tabIndex={0}
                   >
                     {storageClass.value === currentStorageClass && (
                       <div className="absolute top-2 right-2">
