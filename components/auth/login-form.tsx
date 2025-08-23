@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/auth-context';
+import { SSOVerification } from './sso-verification';
 
 interface LoginFormProps {
   className?: string;
@@ -15,8 +16,34 @@ export function LoginForm({ className }: LoginFormProps) {
   const [loginType, setLoginType] = useState<'credentials' | 'sso'>('credentials');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { login } = useAuth();
+  const [ssoVerification, setSSOVerification] = useState<{
+    deviceAuth: any;
+    deviceCode: string;
+    ssoStartUrl: string;
+    ssoRegion: string;
+  } | null>(null);
+  const { login, completeSSOLogin } = useAuth();
   const router = useRouter();
+
+  const handleSSOSuccess = async (user: any) => {
+    console.log('SSO authentication successful');
+    setSSOVerification(null);
+    await completeSSOLogin(user);
+    router.push('/dashboard');
+  };
+
+  const handleSSOError = (error: string) => {
+    console.log('SSO authentication failed:', error);
+    setSSOVerification(null);
+    setError(error);
+    setLoading(false);
+  };
+
+  const handleSSOCancel = () => {
+    console.log('SSO authentication cancelled');
+    setSSOVerification(null);
+    setLoading(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -49,6 +76,19 @@ export function LoginForm({ className }: LoginFormProps) {
       const result = await login(credentials);
       
       if (result.success) {
+        // Check if this is SSO requiring device authorization
+        if (result.needsDeviceAuthorization && result.deviceAuth) {
+          console.log('SSO device authorization required');
+          setSSOVerification({
+            deviceAuth: result.deviceAuth,
+            deviceCode: result.deviceAuth.deviceCode,
+            ssoStartUrl: credentials.ssoStartUrl || '',
+            ssoRegion: credentials.ssoRegion || '',
+          });
+          return; // Don't redirect, show verification screen
+        }
+        
+        // Regular login success
         console.log('Login successful, redirecting to dashboard');
         router.push('/dashboard');
       } else {
@@ -62,6 +102,23 @@ export function LoginForm({ className }: LoginFormProps) {
       setLoading(false);
     }
   };
+
+  // Show SSO verification screen if SSO authentication is in progress
+  if (ssoVerification) {
+    return (
+      <div className={`w-full max-w-md ${className || ''}`}>
+        <SSOVerification
+          deviceAuth={ssoVerification.deviceAuth}
+          deviceCode={ssoVerification.deviceCode}
+          ssoStartUrl={ssoVerification.ssoStartUrl}
+          ssoRegion={ssoVerification.ssoRegion}
+          onSuccess={handleSSOSuccess}
+          onError={handleSSOError}
+          onCancel={handleSSOCancel}
+        />
+      </div>
+    );
+  }
 
   return (
     <Card className={`w-full max-w-md ${className || ''}`}>

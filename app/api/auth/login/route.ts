@@ -103,11 +103,46 @@ export async function POST(request: NextRequest) {
         );
       }
     } else {
-      // SSO authentication - placeholder for now
-      return NextResponse.json(
-        { success: false, error: 'SSO authentication not yet implemented' },
-        { status: 501 }
-      );
+      // SSO authentication using AWS SSO
+      try {
+        const { createSSOService } = await import('@/lib/sso-service');
+        
+        const ssoService = createSSOService({
+          startUrl: validatedData.ssoStartUrl!,
+          region: validatedData.ssoRegion || validatedData.region,
+          clientName: 'AWS Manager App'
+        });
+
+        const { deviceAuth, pollForCompletion } = await ssoService.authenticate();
+        
+        // Store device auth info in session/cache for polling
+        // For simplicity, we'll return the device auth info to the client
+        return NextResponse.json({
+          success: true,
+          requiresDeviceAuth: true,
+          deviceAuth: {
+            userCode: deviceAuth.userCode,
+            verificationUri: deviceAuth.verificationUri,
+            verificationUriComplete: deviceAuth.verificationUriComplete,
+            expiresIn: deviceAuth.expiresIn,
+            interval: deviceAuth.interval
+          },
+          // Return a polling endpoint URL
+          pollEndpoint: '/api/auth/sso-poll',
+          deviceCode: deviceAuth.deviceCode // This should be stored securely in a real app
+        });
+
+      } catch (ssoError: any) {
+        console.error('SSO authentication failed:', ssoError);
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'SSO authentication failed',
+            details: ssoError.message || 'Unable to initiate SSO authentication'
+          },
+          { status: 401 }
+        );
+      }
     }
 
   } catch (error) {

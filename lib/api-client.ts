@@ -89,10 +89,18 @@ class ApiClient {
   }
 
   // Authentication API
-  async login(credentials: LoginCredentials): Promise<ApiResponse<{ user: User }>> {
+  async login(credentials: LoginCredentials): Promise<ApiResponse<{ user: User; deviceAuth?: any }>> {
     return this.request('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
+    });
+  }
+
+  // SSO Polling API
+  async pollSSOToken(deviceCode: string, userCode: string): Promise<ApiResponse<{ user: User }>> {
+    return this.request('/api/auth/sso-poll', {
+      method: 'POST',
+      body: JSON.stringify({ deviceCode, userCode }),
     });
   }
 
