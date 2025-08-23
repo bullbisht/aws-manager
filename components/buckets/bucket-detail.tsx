@@ -304,6 +304,7 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
 
     const isDirectory = objectKey.endsWith('/');
     const keysToUpdate = [objectKey];
+    const originalStorageClass = objects.find(obj => obj.Key === objectKey)?.StorageClass || 'STANDARD';
 
     const confirmationMessage = isDirectory
       ? `Are you sure you want to change the storage class of ALL files in the directory ${objectKey} to ${newStorageClass}? This operation cannot be undone.`
@@ -343,25 +344,6 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
       });
 
       if (result && result.success) {
-        // Update the actual objects state to persist the change
-        setObjects(prevObjects => {
-          if (isDirectory) {
-            // For directory changes, update all objects that start with the prefix
-            return prevObjects.map(obj => 
-              obj.Key.startsWith(objectKey) 
-                ? { ...obj, StorageClass: newStorageClass }
-                : obj
-            );
-          } else {
-            // For individual file changes, update just the specific object
-            return prevObjects.map(obj => 
-              obj.Key === objectKey 
-                ? { ...obj, StorageClass: newStorageClass }
-                : obj
-            );
-          }
-        });
-
         if (isDirectory) {
           const { summary } = (result.data as { summary?: { successful?: number; errors?: number; skipped?: number } }) || {};
           const successfulCount = summary?.successful || 0;
@@ -376,12 +358,18 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
           console.log('✅ Individual storage class change successful');
           success('Storage class changed', `${objectKey} storage class has been changed to ${newStorageClass}`);
         }
+
+        // Always refetch the actual data from S3 to confirm the changes
+        console.log('🔄 Refetching bucket data to confirm changes...');
+        await fetchObjects();
+        
       } else {
         // Revert optimistic update on error
+        console.log('🔄 Reverting optimistic update due to API error');
         startTransition(() => {
           setOptimisticObjects({
             action: 'updateStorageClass',
-            payload: { keys: keysToUpdate, newStorageClass: objects.find(obj => obj.Key === objectKey)?.StorageClass || 'STANDARD' },
+            payload: { keys: keysToUpdate, newStorageClass: originalStorageClass },
           });
         });
 
@@ -391,10 +379,11 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
       }
     } catch (err) {
       // Revert optimistic update on error
+      console.log('🔄 Reverting optimistic update due to exception');
       startTransition(() => {
         setOptimisticObjects({
           action: 'updateStorageClass',
-          payload: { keys: keysToUpdate, newStorageClass: objects.find(obj => obj.Key === objectKey)?.StorageClass || 'STANDARD' },
+          payload: { keys: keysToUpdate, newStorageClass: originalStorageClass },
         });
       });
 
