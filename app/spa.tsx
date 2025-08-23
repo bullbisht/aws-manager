@@ -30,8 +30,12 @@ import { SkeletonCard } from '@/components/ui/skeleton';
 import { ServiceGrid } from '@/components/services/service-grid';
 import { ModernGlacierManagement } from '@/components/storage/modern-glacier-management';
 import BackupDashboard from '@/components/backup/backup-dashboard';
+import { EC2Management } from '@/components/compute/ec2-management';
+import { LambdaManagement } from '@/components/compute/lambda-management';
+import { RDSManagement } from '@/components/database/rds-management';
+import { EBSSnapshotsManagement } from '@/components/storage/ebs-snapshots';
 
-type TabType = 'services' | 'dashboard' | 'buckets' | 'bucket-detail' | 'settings' | 'glacier' | 'aws-backup';
+type TabType = 'services' | 'dashboard' | 'buckets' | 'bucket-detail' | 'settings' | 'glacier' | 'aws-backup' | 's3-management' | 'ec2' | 'lambda' | 'rds' | 'ebs-snapshots';
 
 interface SPAState {
   activeTab: TabType;
@@ -141,20 +145,25 @@ export default function SPAManager() {
     // Handle service navigation based on serviceId
     switch (serviceId) {
       case 's3':
-        handleTabChange('buckets');
-        break;
-      case 'glacier':
-        setState(prev => ({ ...prev, activeTab: 'glacier' }));
+        // For S3, show a combined view with both buckets and storage classes
+        setState(prev => ({ ...prev, activeTab: 's3-management' }));
         break;
       case 'aws-backup':
         setState(prev => ({ ...prev, activeTab: 'aws-backup' }));
         break;
-      case 'glacier-deep-archive':
-      case 'ebs-snapshots':
-      case 'storage-gateway':
       case 'ec2':
+        setState(prev => ({ ...prev, activeTab: 'ec2' }));
+        break;
+      case 'ebs-snapshots':
+        setState(prev => ({ ...prev, activeTab: 'ebs-snapshots' }));
+        break;
+      case 'storage-gateway':
       case 'lambda':
+        setState(prev => ({ ...prev, activeTab: 'lambda' }));
+        break;
       case 'rds':
+        setState(prev => ({ ...prev, activeTab: 'rds' }));
+        break;
       case 'dynamodb':
       case 'vpc':
       case 'cloudfront':
@@ -164,6 +173,12 @@ export default function SPAManager() {
       case 'datasync':
       case 'storage-analytics':
       case 'disaster-recovery':
+      case 'route53':
+      case 'certificate-manager':
+      case 'api-gateway':
+      case 'sqs':
+      case 'sns':
+      case 'codepipeline':
         // For now, these will show a "coming soon" message
         // In the future, these will navigate to their respective management pages
         console.log(`${serviceId} management coming soon`);
@@ -379,6 +394,99 @@ export default function SPAManager() {
         return (
           <ErrorBoundary>
             <BackupDashboard />
+          </ErrorBoundary>
+        );
+      case 's3-management':
+        return (
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">S3 Storage Management</h1>
+              <p className="text-gray-600">Manage your S3 buckets and configure storage optimization</p>
+            </div>
+
+            {/* Enhanced bucket management with storage class info */}
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-semibold text-gray-900">S3 Buckets</h2>
+                  <p className="text-gray-600 mt-1">Create and manage your S3 buckets with built-in storage class optimization</p>
+                </div>
+                <CreateBucketButton onBucketCreated={handleBucketCreated} />
+              </div>
+
+              <BucketSearch />
+              {renderFeatureCards()}
+
+              <ErrorBoundary>
+                <BucketList onBucketSelect={handleBucketSelect} />
+              </ErrorBoundary>
+
+              {/* Storage Class Information Panel */}
+              <div className="bg-blue-50 rounded-lg p-6 mt-8">
+                <h3 className="text-lg font-semibold text-blue-900 mb-3">Storage Class Optimization</h3>
+                <p className="text-blue-800 mb-4">
+                  AWS S3 offers multiple storage classes to optimize costs based on access patterns. 
+                  Configure lifecycle rules within each bucket to automatically transition objects between storage classes.
+                </p>
+                
+                <div className="grid md:grid-cols-4 gap-4">
+                  <div className="bg-white rounded-lg p-4 border border-blue-200">
+                    <h4 className="font-medium text-gray-900 mb-2">S3 Standard</h4>
+                    <p className="text-sm text-gray-600 mb-2">Frequently accessed data</p>
+                    <p className="text-sm font-medium text-green-600">$0.023/GB/month</p>
+                  </div>
+                  
+                  <div className="bg-white rounded-lg p-4 border border-blue-200">
+                    <h4 className="font-medium text-gray-900 mb-2">Glacier Instant Retrieval</h4>
+                    <p className="text-sm text-gray-600 mb-2">Archive with millisecond access</p>
+                    <p className="text-sm font-medium text-blue-600">$0.004/GB/month</p>
+                  </div>
+                  
+                  <div className="bg-white rounded-lg p-4 border border-blue-200">
+                    <h4 className="font-medium text-gray-900 mb-2">Glacier Flexible Retrieval</h4>
+                    <p className="text-sm text-gray-600 mb-2">Archive with 1-12 hour retrieval</p>
+                    <p className="text-sm font-medium text-blue-600">$0.004/GB/month</p>
+                  </div>
+                  
+                  <div className="bg-white rounded-lg p-4 border border-blue-200">
+                    <h4 className="font-medium text-gray-900 mb-2">Glacier Deep Archive</h4>
+                    <p className="text-sm text-gray-600 mb-2">Long-term archive (12+ hours)</p>
+                    <p className="text-sm font-medium text-purple-600">$0.00099/GB/month</p>
+                  </div>
+                </div>
+                
+                <div className="mt-4 p-4 bg-white rounded-lg border border-blue-200">
+                  <p className="text-sm text-gray-700">
+                    <strong>💡 Tip:</strong> Access individual buckets to configure lifecycle policies that automatically 
+                    transition your objects to more cost-effective storage classes based on access patterns and compliance requirements.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      case 'ec2':
+        return (
+          <ErrorBoundary>
+            <EC2Management />
+          </ErrorBoundary>
+        );
+      case 'lambda':
+        return (
+          <ErrorBoundary>
+            <LambdaManagement />
+          </ErrorBoundary>
+        );
+      case 'rds':
+        return (
+          <ErrorBoundary>
+            <RDSManagement />
+          </ErrorBoundary>
+        );
+      case 'ebs-snapshots':
+        return (
+          <ErrorBoundary>
+            <EBSSnapshotsManagement />
           </ErrorBoundary>
         );
       case 'settings':

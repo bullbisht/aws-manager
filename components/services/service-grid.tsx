@@ -101,30 +101,11 @@ export function ServiceGrid({ onServiceSelect }: ServiceGridProps) {
     {
       id: 's3',
       title: 'S3 Storage',
-      description: 'Object storage with lifecycle management and versioning',
+      description: 'Complete S3 object storage with all storage classes: Standard, Glacier IR, Glacier, Deep Archive, lifecycle management, and versioning',
       icon: Database,
       status: 'active' as const,
       category: 'Storage & Backup',
-      stats: 'Currently Active',
-      priority: 'high' as const
-    },
-    {
-      id: 'glacier',
-      title: 'S3 Glacier',
-      description: 'Long-term archival storage with flexible retrieval options',
-      icon: Archive,
-      status: 'active' as const,
-      category: 'Storage & Backup',
-      stats: 'Recently Added',
-      priority: 'high' as const
-    },
-    {
-      id: 'glacier-deep-archive',
-      title: 'Glacier Deep Archive',
-      description: 'Lowest-cost storage for long-term data retention',
-      icon: Snowflake,
-      status: 'coming-soon' as const,
-      category: 'Storage & Backup',
+      stats: 'All Storage Classes Active',
       priority: 'high' as const
     },
     {
@@ -142,8 +123,9 @@ export function ServiceGrid({ onServiceSelect }: ServiceGridProps) {
       title: 'EBS Snapshots',
       description: 'EC2 volume backup and snapshot management',
       icon: HardDrive,
-      status: 'coming-soon' as const,
+      status: 'active' as const,
       category: 'Storage & Backup',
+      stats: 'Just Added',
       priority: 'high' as const
     },
     {
@@ -162,8 +144,9 @@ export function ServiceGrid({ onServiceSelect }: ServiceGridProps) {
       title: 'EC2 Instances',
       description: 'Virtual server management with backup integration',
       icon: Server,
-      status: 'coming-soon' as const,
+      status: 'active' as const,
       category: 'Compute & Database',
+      stats: 'Just Added',
       priority: 'high' as const
     },
     {
@@ -171,8 +154,9 @@ export function ServiceGrid({ onServiceSelect }: ServiceGridProps) {
       title: 'Lambda Functions',
       description: 'Serverless function management and monitoring',
       icon: Zap,
-      status: 'coming-soon' as const,
+      status: 'active' as const,
       category: 'Compute & Database',
+      stats: 'Just Added',
       priority: 'high' as const
     },
     {
@@ -180,8 +164,9 @@ export function ServiceGrid({ onServiceSelect }: ServiceGridProps) {
       title: 'RDS Databases',
       description: 'Relational database management with automated backups',
       icon: Database,
-      status: 'coming-soon' as const,
+      status: 'active' as const,
       category: 'Compute & Database',
+      stats: 'Just Activated',
       priority: 'high' as const
     },
     {
