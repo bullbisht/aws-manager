@@ -10,6 +10,7 @@ import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { SkeletonCard } from '@/components/ui/skeleton';
 import { useToastHelpers, useToast } from '@/components/ui/toast';
 import { BucketDeleteModal } from '@/components/ui/bucket-delete-modal';
+import { BucketInfoModal } from './bucket-info-modal';
 import Link from 'next/link';
 import { RefreshCw, Folder, Calendar, HardDrive, FileText, Settings, Trash2, Plus, Lock, Search, Filter, ArrowUpDown, ChevronDown } from 'lucide-react';
 
@@ -84,10 +85,11 @@ function UnauthenticatedState() {
   );
 }
 
-function BucketCard({ bucket, onBucketSelect, onDeleteBucket, countdownSeconds, onUndoDelete }: { 
+function BucketCard({ bucket, onBucketSelect, onDeleteBucket, onBucketInfo, countdownSeconds, onUndoDelete }: { 
   bucket: Bucket; 
   onBucketSelect?: (bucketName: string) => void;
   onDeleteBucket?: (bucketName: string) => void;
+  onBucketInfo?: (bucketName: string) => void;
   countdownSeconds?: number;
   onUndoDelete?: (bucketName: string) => void;
 }) {
@@ -207,7 +209,10 @@ function BucketCard({ bucket, onBucketSelect, onDeleteBucket, countdownSeconds, 
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onBucketInfo?.(bucket.Name);
+                  }}
                   className="border-gray-300 text-gray-600 hover:bg-gray-50 px-2"
                 >
                   <Settings className="h-4 w-4" />
@@ -250,6 +255,13 @@ function BucketListContent({ onBucketSelect }: BucketListProps) {
     isOpen: false,
     bucketName: '',
     loading: false
+  });
+  const [infoModal, setInfoModal] = useState<{
+    isOpen: boolean;
+    bucketName: string;
+  }>({
+    isOpen: false,
+    bucketName: ''
   });
   const [pendingDeletions, setPendingDeletions] = useState<Map<string, NodeJS.Timeout>>(new Map());
   const [deletionCountdowns, setDeletionCountdowns] = useState<Map<string, number>>(new Map());
@@ -378,6 +390,20 @@ function BucketListContent({ onBucketSelect }: BucketListProps) {
       isOpen: true,
       bucketName,
       loading: false
+    });
+  };
+
+  const handleBucketInfo = (bucketName: string) => {
+    setInfoModal({
+      isOpen: true,
+      bucketName
+    });
+  };
+
+  const closeBucketInfoModal = () => {
+    setInfoModal({
+      isOpen: false,
+      bucketName: ''
     });
   };
 
@@ -673,6 +699,7 @@ function BucketListContent({ onBucketSelect }: BucketListProps) {
               bucket={bucket} 
               onBucketSelect={onBucketSelect}
               onDeleteBucket={handleDeleteBucket}
+              onBucketInfo={handleBucketInfo}
               countdownSeconds={deletionCountdowns.get(bucket.Name)}
               onUndoDelete={undoDelete}
             />
@@ -687,6 +714,13 @@ function BucketListContent({ onBucketSelect }: BucketListProps) {
         onConfirm={confirmDeleteBucket}
         bucketName={deleteModal.bucketName}
         loading={deleteModal.loading}
+      />
+
+      {/* Bucket Information Modal */}
+      <BucketInfoModal
+        isOpen={infoModal.isOpen}
+        onClose={closeBucketInfoModal}
+        bucketName={infoModal.bucketName}
       />
     </div>
   );
