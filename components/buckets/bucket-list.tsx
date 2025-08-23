@@ -183,7 +183,7 @@ function BucketCard({ bucket, onBucketSelect, onDeleteBucket, onBucketInfo, coun
                   })}
                 </div>
                 {!bucket.pendingDeletion && (
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                     <Database className="h-3 w-3" />
                     <StorageClassSelector
                       currentStorageClass={bucket.StorageClass || 'STANDARD'}
