@@ -41,6 +41,8 @@ export interface Bucket {
   Region: string;
   Objects: number;
   Size: string;
+  StorageClass?: string;
+  StorageClasses?: { [key: string]: number };
   pendingDeletion?: boolean;
 }
 

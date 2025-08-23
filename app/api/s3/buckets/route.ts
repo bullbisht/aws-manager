@@ -65,6 +65,10 @@ export async function GET(request: NextRequest) {
           let totalSize = 0;
           let hasMoreObjects = false;
           
+          // Storage class analysis
+          let storageClasses: { [key: string]: number } = {};
+          let primaryStorageClass = 'STANDARD'; // Default
+          
           try {
             const { ListObjectsV2Command } = await import('@aws-sdk/client-s3');
             const listCommand = new ListObjectsV2Command({ 
@@ -76,6 +80,18 @@ export async function GET(request: NextRequest) {
             if (listResponse.Contents) {
               objectCount = listResponse.Contents.length;
               totalSize = listResponse.Contents.reduce((sum, obj) => sum + (obj.Size || 0), 0);
+              
+              // Analyze storage classes
+              listResponse.Contents.forEach(obj => {
+                const storageClass = obj.StorageClass || 'STANDARD';
+                storageClasses[storageClass] = (storageClasses[storageClass] || 0) + 1;
+              });
+              
+              // Determine primary storage class (most common one)
+              if (Object.keys(storageClasses).length > 0) {
+                primaryStorageClass = Object.entries(storageClasses)
+                  .sort(([,a], [,b]) => b - a)[0][0];
+              }
             }
             
             // If there are more objects, we still return the count we got
@@ -91,6 +107,8 @@ export async function GET(request: NextRequest) {
             Region: user.awsRegion,
             Objects: objectCount,
             Size: totalSize > 0 ? formatBytes(totalSize) : 'Empty',
+            StorageClass: primaryStorageClass,
+            StorageClasses: storageClasses,
             hasMoreObjects: hasMoreObjects || false,
           };
         } catch (headError) {

@@ -4,6 +4,7 @@ import { Suspense, useTransition, startTransition } from 'react';
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth-context';
 import { apiClient, type Bucket } from '@/lib/api-client';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
@@ -12,7 +13,7 @@ import { useToastHelpers, useToast } from '@/components/ui/toast';
 import { BucketDeleteModal } from '@/components/ui/bucket-delete-modal';
 import { BucketInfoModal } from './bucket-info-modal';
 import Link from 'next/link';
-import { RefreshCw, Folder, Calendar, HardDrive, FileText, Settings, Trash2, Plus, Lock, Search, Filter, ArrowUpDown, ChevronDown } from 'lucide-react';
+import { RefreshCw, Folder, Calendar, HardDrive, FileText, Settings, Trash2, Plus, Lock, Search, Filter, ArrowUpDown, ChevronDown, Database } from 'lucide-react';
 
 interface BucketListProps {
   onBucketSelect?: (bucketName: string) => void;
@@ -158,6 +159,17 @@ function BucketCard({ bucket, onBucketSelect, onDeleteBucket, onBucketInfo, coun
                     year: new Date(bucket.CreationDate).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
                   })}
                 </div>
+                {bucket.StorageClass && (
+                  <div className="flex items-center gap-1">
+                    <Database className="h-3 w-3" />
+                    <Badge 
+                      variant="secondary" 
+                      className="text-xs px-2 py-0.5 bg-blue-100 text-blue-800 border-blue-200"
+                    >
+                      {bucket.StorageClass}
+                    </Badge>
+                  </div>
+                )}
               </div>
             </div>
           </div>
