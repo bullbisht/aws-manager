@@ -38,12 +38,37 @@ Successfully completed the AWS S3 integration phase, replacing all mock data wit
 
 The application now supports **real AWS S3 operations**:
 
-1. **Authentication**: Users can login with actual AWS access keys
+1. **Authentication**: Flexible credential chain (AWS SSO, environment variables, IAM roles)
 2. **Bucket Management**: List and create real S3 buckets
 3. **Object Operations**: List and delete actual S3 objects
-4. **File Uploads**: Generate real presigned URLs for secure uploads
-5. **Multi-Region**: Support for different AWS regions
-6. **Error Handling**: Proper AWS error messages and validation
+4. **Storage Class Management**: Change storage classes with comprehensive validation
+5. **File Uploads**: Generate real presigned URLs for secure uploads
+6. **Multi-Region**: Support for different AWS regions
+7. **Error Handling**: Proper AWS error messages and validation
+
+### New Storage Class Features
+
+- **Individual File Operations**: Change storage class for specific objects with validation
+- **Bulk Directory Operations**: Process entire directories with detailed results
+- **Transition Validation**: Enforces AWS storage class transition rules
+- **Restore Detection**: Identifies archived objects requiring restoration
+- **Comprehensive Error Messages**: Clear guidance for blocked transitions
+
+### AWS Authentication Improvements
+
+The S3 client now uses AWS SDK's default credential chain for maximum flexibility:
+
+1. **Environment Variables** (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
+2. **AWS SSO Credentials** (from `aws sso login`)
+3. **Shared Credentials File** (~/.aws/credentials)
+4. **IAM Roles** (for EC2/Lambda execution)
+5. **Container Credentials** (for ECS/Fargate)
+
+**Benefits:**
+- Automatic fallback between credential sources
+- No code changes required for different deployment scenarios
+- Proper AWS SSO support without conflicts
+- Maintains backward compatibility with environment variables
 
 ## 📊 Technical Metrics
 

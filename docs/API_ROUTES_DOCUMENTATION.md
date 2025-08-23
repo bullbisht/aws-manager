@@ -408,12 +408,142 @@ RATE_LIMIT_REQUESTS_PER_MINUTE=100
 5. **Input Validation**: All inputs are validated with Zod schemas
 6. **Error Handling**: Sensitive information is not exposed in error messages
 
+### Storage Class Management Endpoints
+
+#### PUT `/api/s3/objects/[bucketName]/[objectKey]/storage-class`
+
+Changes the storage class of a specific S3 object with comprehensive validation.
+
+**Parameters:**
+- `bucketName`: S3 bucket name
+- `objectKey`: S3 object key (file path)
+
+**Request Body:**
+```json
+{
+  "storageClass": "STANDARD" | "STANDARD_IA" | "ONEZONE_IA" | "REDUCED_REDUNDANCY" | "GLACIER" | "DEEP_ARCHIVE" | "INTELLIGENT_TIERING" | "GLACIER_IR"
+}
+```
+
+**Features:**
+- **Storage Class Transition Validation**: Validates transitions according to AWS rules
+- **Current State Check**: Retrieves current storage class before attempting changes
+- **Restore State Detection**: Blocks transitions for archived objects that need restoration
+- **Detailed Error Messages**: Provides specific guidance for blocked transitions
+
+**Response (Success):**
+```json
+{
+  "success": true,
+  "message": "Storage class updated to STANDARD_IA",
+  "previousClass": "STANDARD",
+  "newClass": "STANDARD_IA"
+}
+```
+
+**Response (Validation Error):**
+```json
+{
+  "success": false,
+  "error": "Objects in DEEP_ARCHIVE storage class must be restored before changing to STANDARD. Please restore the object first, then change its storage class.",
+  "currentClass": "DEEP_ARCHIVE",
+  "requestedClass": "STANDARD",
+  "requiresRestore": true
+}
+```
+
+**Common Validation Scenarios:**
+- **DEEP_ARCHIVE → Any other class**: Requires restore operation first
+- **GLACIER → STANDARD/STANDARD_IA**: Requires restore operation first
+- **Any → GLACIER/DEEP_ARCHIVE**: Always allowed (archival)
+- **STANDARD ↔ STANDARD_IA**: Always allowed (frequent access classes)
+
+#### PUT `/api/s3/objects/[bucketName]/bulk-storage-class`
+
+Changes the storage class of multiple objects in a directory with individual file validation.
+
+**Parameters:**
+- `bucketName`: S3 bucket name
+
+**Request Body:**
+```json
+{
+  "prefix": "folder/path/",
+  "storageClass": "STANDARD" | "STANDARD_IA" | "ONEZONE_IA" | "REDUCED_REDUNDANCY" | "GLACIER" | "DEEP_ARCHIVE" | "INTELLIGENT_TIERING" | "GLACIER_IR"
+}
+```
+
+**Features:**
+- **Per-File Validation**: Each file is validated individually before processing
+- **Concurrency Control**: Processes files in batches to avoid overwhelming AWS API
+- **Detailed Results**: Provides comprehensive breakdown of operation results
+- **Skip Invalid Transitions**: Continues processing other files when some are blocked
+- **Restore Detection**: Identifies archived objects that need restoration
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Bulk storage class update completed",
+  "summary": {
+    "total": 20,
+    "successful": 15,
+    "blocked": 3,
+    "skipped": 1,
+    "errors": 1
+  },
+  "details": [
+    {
+      "key": "docs/file1.pdf",
+      "status": "success",
+      "previousClass": "STANDARD",
+      "newClass": "STANDARD_IA"
+    },
+    {
+      "key": "docs/archived.pdf",
+      "status": "blocked",
+      "currentClass": "DEEP_ARCHIVE",
+      "reason": "Objects in DEEP_ARCHIVE storage class must be restored before changing to STANDARD"
+    }
+  ]
+}
+```
+
+**Status Types:**
+- **success**: Storage class changed successfully
+- **blocked**: Transition not allowed due to AWS rules
+- **skipped**: File already in target storage class
+- **error**: Unexpected error occurred during processing
+
+## Storage Class Validation Rules
+
+The API implements comprehensive AWS storage class transition validation:
+
+### Transition Matrix
+| From \ To | STANDARD | STANDARD_IA | GLACIER | DEEP_ARCHIVE |
+|-----------|----------|-------------|---------|--------------|
+| STANDARD | ✅ | ✅ | ✅ | ✅ |
+| STANDARD_IA | ✅ | ✅ | ✅ | ✅ |
+| GLACIER | 🔄 Restore First | 🔄 Restore First | ✅ | ✅ |
+| DEEP_ARCHIVE | 🔄 Restore First | 🔄 Restore First | 🔄 Restore First | ✅ |
+
+### Legend
+- ✅ **Allowed**: Direct transition supported
+- 🔄 **Restore First**: Object must be restored before transition
+
+### Restore Process
+For archived objects (GLACIER, DEEP_ARCHIVE):
+1. Initiate restore operation through AWS console or CLI
+2. Wait for restore completion (minutes to hours depending on retrieval tier)
+3. Change storage class while object is in restored state
+4. AWS will automatically re-archive after restore expires
+
 ## Future Enhancements
 
-1. **AWS SSO Integration**: Implement actual AWS SSO authentication
-2. **Real S3 Operations**: Replace mock data with AWS SDK calls
+1. **Object Restore API**: Implement restore initiation endpoints
+2. **Real-time Status Updates**: WebSocket support for long-running operations
 3. **Caching**: Add Redis caching for bucket/object listings
 4. **Rate Limiting**: Implement request rate limiting
 5. **Audit Logging**: Add comprehensive audit trails
-6. **Batch Operations**: Support bulk object operations
-7. **WebSocket Support**: Real-time updates for large operations
+6. **Advanced Filtering**: Support complex object filtering and sorting
+7. **Lifecycle Policies**: API for managing S3 lifecycle rules

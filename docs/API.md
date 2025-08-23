@@ -768,6 +768,172 @@ Content-Type: application/json
 }
 ```
 
+### 3.12 Change Object Storage Class
+
+**Endpoint**: `PUT /api/v1/buckets/{bucketName}/objects/{objectKey}/storage-class`
+
+**Description**: Change the storage class of a specific S3 object with comprehensive validation
+
+**Headers**:
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+  "storageClass": "STANDARD_IA"
+}
+```
+
+**Supported Storage Classes**:
+- `STANDARD` - General purpose
+- `STANDARD_IA` - Infrequent access
+- `ONEZONE_IA` - Single AZ infrequent access
+- `REDUCED_REDUNDANCY` - Legacy reduced redundancy
+- `INTELLIGENT_TIERING` - Automatic cost optimization
+- `GLACIER` - Long-term archive
+- `GLACIER_IR` - Instant retrieval archive
+- `DEEP_ARCHIVE` - Lowest cost archive
+
+**Features**:
+- **Storage Class Transition Validation**: Validates transitions according to AWS rules
+- **Current State Check**: Retrieves current storage class before attempting changes
+- **Restore State Detection**: Blocks transitions for archived objects that need restoration
+- **Detailed Error Messages**: Provides specific guidance for blocked transitions
+
+**Response (Success)**:
+```json
+{
+  "success": true,
+  "message": "Storage class updated to STANDARD_IA",
+  "data": {
+    "key": "documents/report.pdf",
+    "previousClass": "STANDARD",
+    "newClass": "STANDARD_IA",
+    "timestamp": "2025-08-11T15:30:00Z"
+  }
+}
+```
+
+**Response (Validation Error)**:
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_STORAGE_CLASS_TRANSITION",
+    "message": "Objects in DEEP_ARCHIVE storage class must be restored before changing to STANDARD. Please restore the object first, then change its storage class.",
+    "details": {
+      "currentClass": "DEEP_ARCHIVE",
+      "requestedClass": "STANDARD",
+      "requiresRestore": true,
+      "key": "documents/archived-report.pdf"
+    },
+    "timestamp": "2025-08-11T15:30:00Z"
+  }
+}
+```
+
+### 3.13 Bulk Change Storage Class
+
+**Endpoint**: `PUT /api/v1/buckets/{bucketName}/objects/bulk-storage-class`
+
+**Description**: Change the storage class of multiple objects in a directory with individual file validation
+
+**Headers**:
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+  "prefix": "documents/",
+  "storageClass": "STANDARD_IA"
+}
+```
+
+**Features**:
+- **Per-File Validation**: Each file is validated individually before processing
+- **Concurrency Control**: Processes files in batches to avoid overwhelming AWS API
+- **Detailed Results**: Provides comprehensive breakdown of operation results
+- **Skip Invalid Transitions**: Continues processing other files when some are blocked
+- **Restore Detection**: Identifies archived objects that need restoration
+
+**Response**:
+```json
+{
+  "success": true,
+  "message": "Bulk storage class update completed",
+  "data": {
+    "summary": {
+      "total": 20,
+      "successful": 15,
+      "blocked": 3,
+      "skipped": 1,
+      "errors": 1
+    },
+    "details": [
+      {
+        "key": "documents/file1.pdf",
+        "status": "success",
+        "previousClass": "STANDARD",
+        "newClass": "STANDARD_IA"
+      },
+      {
+        "key": "documents/archived.pdf",
+        "status": "blocked",
+        "currentClass": "DEEP_ARCHIVE",
+        "reason": "Objects in DEEP_ARCHIVE storage class must be restored before changing to STANDARD"
+      },
+      {
+        "key": "documents/already-ia.pdf",
+        "status": "skipped",
+        "reason": "Object already in target storage class"
+      }
+    ]
+  }
+}
+```
+
+**Status Types**:
+- **success**: Storage class changed successfully
+- **blocked**: Transition not allowed due to AWS rules
+- **skipped**: File already in target storage class
+- **error**: Unexpected error occurred during processing
+
+## Storage Class Validation Rules
+
+The API implements comprehensive AWS storage class transition validation to prevent invalid operations and provide clear guidance.
+
+### Transition Matrix
+
+| From \ To | STANDARD | STANDARD_IA | GLACIER | DEEP_ARCHIVE |
+|-----------|----------|-------------|---------|--------------|
+| STANDARD | ✅ | ✅ | ✅ | ✅ |
+| STANDARD_IA | ✅ | ✅ | ✅ | ✅ |
+| GLACIER | 🔄 Restore First | 🔄 Restore First | ✅ | ✅ |
+| DEEP_ARCHIVE | 🔄 Restore First | 🔄 Restore First | 🔄 Restore First | ✅ |
+
+### Legend
+- ✅ **Allowed**: Direct transition supported
+- 🔄 **Restore First**: Object must be restored before transition
+
+### Restore Process
+For archived objects (GLACIER, DEEP_ARCHIVE):
+1. Initiate restore operation through AWS console or CLI
+2. Wait for restore completion (minutes to hours depending on retrieval tier)
+3. Change storage class while object is in restored state
+4. AWS will automatically re-archive after restore expires
+
+### Common Validation Scenarios
+- **DEEP_ARCHIVE → Any other class**: Requires restore operation first
+- **GLACIER → STANDARD/STANDARD_IA**: Requires restore operation first
+- **Any → GLACIER/DEEP_ARCHIVE**: Always allowed (archival)
+- **STANDARD ↔ STANDARD_IA**: Always allowed (frequent access classes)
+
 ---
 
 ## 4. User Management
