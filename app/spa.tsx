@@ -13,7 +13,8 @@ import {
   Settings, 
   Upload,
   Shield,
-  Zap
+  Zap,
+  Grid3X3
 } from 'lucide-react';
 
 // Import existing components
@@ -26,8 +27,11 @@ import { CreateBucketButton } from '@/components/buckets/create-bucket-button';
 import { BucketSearch } from '@/components/buckets/bucket-search';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { SkeletonCard } from '@/components/ui/skeleton';
+import { ServiceGrid } from '@/components/services/service-grid';
+import { GlacierManagement } from '@/components/storage/glacier-management';
+import BackupDashboard from '@/components/backup/backup-dashboard';
 
-type TabType = 'dashboard' | 'buckets' | 'bucket-detail' | 'settings';
+type TabType = 'services' | 'dashboard' | 'buckets' | 'bucket-detail' | 'settings' | 'glacier' | 'aws-backup';
 
 interface SPAState {
   activeTab: TabType;
@@ -37,7 +41,7 @@ interface SPAState {
 export default function SPAManager() {
   const { user, isLoading: authLoading, logout } = useAuth();
   const [state, setState] = useState<SPAState>({
-    activeTab: 'dashboard'
+    activeTab: 'services'
   });
 
   // Show loading while checking authentication
@@ -82,6 +86,12 @@ export default function SPAManager() {
 
   const navigation = [
     {
+      id: 'services' as TabType,
+      name: 'Services',
+      icon: Grid3X3,
+      description: 'AWS Services Overview'
+    },
+    {
       id: 'dashboard' as TabType,
       name: 'Dashboard',
       icon: Home,
@@ -125,6 +135,49 @@ export default function SPAManager() {
       handleTabChange(tab as TabType);
     }
   };
+
+  const handleServiceSelect = (serviceId: string) => {
+    console.log('Service selected:', serviceId);
+    // Handle service navigation based on serviceId
+    switch (serviceId) {
+      case 's3':
+        handleTabChange('buckets');
+        break;
+      case 'glacier':
+        setState(prev => ({ ...prev, activeTab: 'glacier' }));
+        break;
+      case 'aws-backup':
+        setState(prev => ({ ...prev, activeTab: 'aws-backup' }));
+        break;
+      case 'glacier-deep-archive':
+      case 'ebs-snapshots':
+      case 'storage-gateway':
+      case 'ec2':
+      case 'lambda':
+      case 'rds':
+      case 'dynamodb':
+      case 'vpc':
+      case 'cloudfront':
+      case 'iam':
+      case 'cloudwatch':
+      case 'eks':
+      case 'datasync':
+      case 'storage-analytics':
+      case 'disaster-recovery':
+        // For now, these will show a "coming soon" message
+        // In the future, these will navigate to their respective management pages
+        console.log(`${serviceId} management coming soon`);
+        break;
+      default:
+        console.log('Unknown service:', serviceId);
+    }
+  };
+
+  const renderServices = () => (
+    <ErrorBoundary>
+      <ServiceGrid onServiceSelect={handleServiceSelect} />
+    </ErrorBoundary>
+  );
 
   const renderDashboard = () => (
     <div className="space-y-6">
@@ -308,16 +361,30 @@ export default function SPAManager() {
 
   const renderContent = () => {
     switch (state.activeTab) {
+      case 'services':
+        return renderServices();
       case 'dashboard':
         return renderDashboard();
       case 'buckets':
         return renderBuckets();
       case 'bucket-detail':
         return renderBucketDetail();
+      case 'glacier':
+        return (
+          <ErrorBoundary>
+            <GlacierManagement />
+          </ErrorBoundary>
+        );
+      case 'aws-backup':
+        return (
+          <ErrorBoundary>
+            <BackupDashboard />
+          </ErrorBoundary>
+        );
       case 'settings':
         return renderSettings();
       default:
-        return renderDashboard();
+        return renderServices();
     }
   };
 

@@ -24,6 +24,16 @@ interface DialogTitleProps {
   children: React.ReactNode;
 }
 
+interface DialogDescriptionProps {
+  className?: string;
+  children: React.ReactNode;
+}
+
+interface DialogTriggerProps {
+  asChild?: boolean;
+  children: React.ReactNode;
+}
+
 export function Dialog({ open, onOpenChange, children }: DialogProps) {
   if (!open) return null;
 
@@ -65,4 +75,19 @@ export function DialogTitle({ className = '', children }: DialogTitleProps) {
       {children}
     </h2>
   );
+}
+
+export function DialogDescription({ className = '', children }: DialogDescriptionProps) {
+  return (
+    <p className={`text-sm text-gray-600 mt-2 ${className}`}>
+      {children}
+    </p>
+  );
+}
+
+export function DialogTrigger({ asChild, children }: DialogTriggerProps) {
+  if (asChild && React.isValidElement(children)) {
+    return React.cloneElement(children);
+  }
+  return <>{children}</>;
 }
