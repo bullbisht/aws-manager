@@ -786,14 +786,34 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
                         isOptimistic ? 'opacity-60' : ''
                       } ${isDeleting ? 'bg-red-50' : 'hover:bg-gray-50'}`}>
                         {object.StorageClass ? (
-                          <StorageClassSelector
-                            currentStorageClass={object.StorageClass}
-                            onStorageClassChange={(newStorageClass) => handleStorageClassChange(object.Key, newStorageClass)}
-                            disabled={isOptimistic || isDeleting}
-                            objectKey={object.Key}
-                            isDirectory={object.Key.endsWith('/')}
-                            bucketName={bucketName}
-                          />
+                          <div
+                            style={{
+                              pointerEvents: 'auto',
+                              userSelect: 'none',
+                              WebkitUserSelect: 'none'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
+                            onMouseLeave={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
+                            onContextMenu={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
+                          >
+                            <StorageClassSelector
+                              currentStorageClass={object.StorageClass}
+                              onStorageClassChange={(newStorageClass) => handleStorageClassChange(object.Key, newStorageClass)}
+                              disabled={isOptimistic || isDeleting}
+                              objectKey={object.Key}
+                              isDirectory={object.Key.endsWith('/')}
+                              bucketName={bucketName}
+                            />
+                          </div>
                         ) : null}
                       </div>
 

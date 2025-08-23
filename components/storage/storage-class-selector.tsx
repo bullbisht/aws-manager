@@ -179,18 +179,52 @@ export function StorageClassSelector({
 
   return (
     <div className="relative">
-      <Button
-        variant="ghost"
-        size="sm"
+      <span
         onClick={() => setShowSelector(true)}
-        className={`h-auto p-1 text-xs border ${currentClass?.borderColor} ${currentClass?.bgColor} ${currentClass?.color} hover:opacity-80 transition-all`}
-        title=""
+        className={`inline-flex items-center gap-1.5 h-auto p-1 text-xs border rounded cursor-pointer ${currentClass?.borderColor} ${currentClass?.bgColor} ${currentClass?.color} hover:opacity-80 transition-all`}
+        style={{ 
+          WebkitUserSelect: 'none',
+          userSelect: 'none',
+          pointerEvents: 'auto',
+          display: 'inline-flex'
+        }}
+        onMouseEnter={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onMouseLeave={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onFocus={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onBlur={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            e.stopPropagation();
+            setShowSelector(true);
+          }
+        }}
       >
-        <div className="flex items-center gap-1.5">
+        <span style={{ pointerEvents: 'none' }}>
           {currentClass?.icon}
-          <span className="font-medium">{currentClass?.name || currentStorageClass}</span>
-        </div>
-      </Button>
+        </span>
+        <span className="font-medium" style={{ pointerEvents: 'none' }}>
+          {currentClass?.name || currentStorageClass}
+        </span>
+      </span>
 
       {showSelector && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -233,6 +267,22 @@ export function StorageClassSelector({
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                     onClick={() => handleSelect(storageClass)}
+                    style={{
+                      userSelect: 'none',
+                      WebkitUserSelect: 'none'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onMouseLeave={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
                   >
                     {storageClass.value === currentStorageClass && (
                       <div className="absolute top-2 right-2">
@@ -244,7 +294,9 @@ export function StorageClassSelector({
                     
                     <div className="flex items-start gap-3">
                       <div className={`p-2 rounded-md ${storageClass.bgColor} ${storageClass.color}`}>
-                        {storageClass.icon}
+                        <div>
+                          {storageClass.icon}
+                        </div>
                       </div>
                       
                       <div className="flex-1 min-w-0">

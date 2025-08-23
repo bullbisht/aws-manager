@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth-context';
@@ -14,7 +15,8 @@ import {
   Upload,
   Shield,
   Zap,
-  Grid3X3
+  Grid3X3,
+  ChevronRight
 } from 'lucide-react';
 
 // Import existing components
@@ -192,6 +194,238 @@ export default function SPAManager() {
       default:
         console.log('Unknown service:', serviceId);
     }
+  };
+
+  const generateBreadcrumbs = () => {
+    const breadcrumbs: Array<{ label: string; path: string; isActive: boolean }> = [];
+    
+    // Always start with Home
+    breadcrumbs.push({
+      label: 'Home',
+      path: '/',
+      isActive: false
+    });
+
+    // Add breadcrumbs based on current state
+    switch (state.activeTab) {
+      case 'services':
+        breadcrumbs.push({
+          label: 'Services',
+          path: '/services',
+          isActive: true
+        });
+        break;
+      
+      case 'dashboard':
+        breadcrumbs.push({
+          label: 'Dashboard',
+          path: '/dashboard',
+          isActive: true
+        });
+        break;
+      
+      case 'buckets':
+        breadcrumbs.push({
+          label: 'S3 Buckets',
+          path: '/s3/buckets',
+          isActive: true
+        });
+        break;
+      
+      case 'bucket-detail':
+        breadcrumbs.push(
+          {
+            label: 'S3 Buckets',
+            path: '/s3/buckets',
+            isActive: false
+          },
+          {
+            label: state.selectedBucket || 'Bucket Details',
+            path: `/s3/buckets/${state.selectedBucket}`,
+            isActive: true
+          }
+        );
+        break;
+      
+      case 's3-management':
+        breadcrumbs.push(
+          {
+            label: 'Services',
+            path: '/services',
+            isActive: false
+          },
+          {
+            label: 'S3 Storage Management',
+            path: '/services/s3',
+            isActive: true
+          }
+        );
+        break;
+      
+      case 'ec2':
+        breadcrumbs.push(
+          {
+            label: 'Services',
+            path: '/services',
+            isActive: false
+          },
+          {
+            label: 'EC2 Management',
+            path: '/services/ec2',
+            isActive: true
+          }
+        );
+        break;
+      
+      case 'lambda':
+        breadcrumbs.push(
+          {
+            label: 'Services',
+            path: '/services',
+            isActive: false
+          },
+          {
+            label: 'Lambda Management',
+            path: '/services/lambda',
+            isActive: true
+          }
+        );
+        break;
+      
+      case 'rds':
+        breadcrumbs.push(
+          {
+            label: 'Services',
+            path: '/services',
+            isActive: false
+          },
+          {
+            label: 'RDS Management',
+            path: '/services/rds',
+            isActive: true
+          }
+        );
+        break;
+      
+      case 'ebs-snapshots':
+        breadcrumbs.push(
+          {
+            label: 'Services',
+            path: '/services',
+            isActive: false
+          },
+          {
+            label: 'EBS Snapshots',
+            path: '/services/ebs-snapshots',
+            isActive: true
+          }
+        );
+        break;
+      
+      case 'storage-analytics':
+        breadcrumbs.push(
+          {
+            label: 'Services',
+            path: '/services',
+            isActive: false
+          },
+          {
+            label: 'Storage Analytics',
+            path: '/services/storage-analytics',
+            isActive: true
+          }
+        );
+        break;
+      
+      case 'iam':
+        breadcrumbs.push(
+          {
+            label: 'Services',
+            path: '/services',
+            isActive: false
+          },
+          {
+            label: 'IAM Management',
+            path: '/services/iam',
+            isActive: true
+          }
+        );
+        break;
+      
+      case 'aws-backup':
+        breadcrumbs.push(
+          {
+            label: 'Services',
+            path: '/services',
+            isActive: false
+          },
+          {
+            label: 'AWS Backup',
+            path: '/services/aws-backup',
+            isActive: true
+          }
+        );
+        break;
+      
+      case 'glacier':
+        breadcrumbs.push(
+          {
+            label: 'Services',
+            path: '/services',
+            isActive: false
+          },
+          {
+            label: 'Glacier Management',
+            path: '/services/glacier',
+            isActive: true
+          }
+        );
+        break;
+      
+      case 'settings':
+        breadcrumbs.push({
+          label: 'Settings',
+          path: '/settings',
+          isActive: true
+        });
+        break;
+      
+      default:
+        breadcrumbs.push({
+          label: 'Services',
+          path: '/services',
+          isActive: true
+        });
+        break;
+    }
+
+    return breadcrumbs;
+  };
+
+  const renderBreadcrumbs = () => {
+    const breadcrumbs = generateBreadcrumbs();
+    
+    return (
+      <nav className="flex items-center space-x-1 text-sm text-gray-500 mb-6" aria-label="Breadcrumb">
+        {breadcrumbs.map((breadcrumb, index) => (
+          <div key={index} className="flex items-center">
+            {index > 0 && (
+              <ChevronRight className="w-4 h-4 mx-1 text-gray-400" />
+            )}
+            <span 
+              className={`px-2 py-1 rounded ${
+                breadcrumb.isActive 
+                  ? 'text-blue-600 bg-blue-50 font-medium' 
+                  : 'text-gray-600 hover:text-gray-900 cursor-pointer hover:bg-gray-100'
+              }`}
+              title={`Current path: ${breadcrumb.path}`}
+            >
+              {breadcrumb.label}
+            </span>
+          </div>
+        ))}
+      </nav>
+    );
   };
 
   const renderServices = () => (
@@ -561,6 +795,9 @@ export default function SPAManager() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Breadcrumb Navigation */}
+        {renderBreadcrumbs()}
+        
         {renderContent()}
       </main>
     </div>
