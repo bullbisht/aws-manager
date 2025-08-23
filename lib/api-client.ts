@@ -204,6 +204,17 @@ class ApiClient {
     });
   }
 
+  async changeBulkStorageClass(bucket: string, prefix: string, storageClass: string): Promise<ApiResponse<{ 
+    message: string; 
+    summary: { total: number; successful: number; errors: number; skipped: number };
+    details: any[];
+  }>> {
+    return this.request(`/api/s3/objects/${bucket}/bulk-storage-class`, {
+      method: 'POST',
+      body: JSON.stringify({ prefix, storageClass }),
+    });
+  }
+
   // S3 Upload API
   async getUploadUrl(
     bucket: string,

@@ -36,7 +36,7 @@ import {
   Settings
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { StorageClassSelector } from '@/components/storage/storage-class-selector';
 
 interface S3Object {
   Key: string;
@@ -289,22 +289,48 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
   };
 
   const handleStorageClassChange = async (objectKey: string, newStorageClass: string) => {
-    if (!confirm(`Are you sure you want to change the storage class of ${objectKey} to ${newStorageClass}?`)) {
-      return;
-    }
+    const isDirectory = objectKey.endsWith('/');
     
-    try {
-      const result = await apiClient.changeStorageClass(bucketName, objectKey, newStorageClass);
-      if (result.success) {
-        success('Storage class changed', `${objectKey} storage class has been changed to ${newStorageClass}`);
-        startTransition(() => {
-          fetchObjects(); // Refresh the list to show updated storage class
-        });
-      } else {
-        showError('Storage class change failed', result.error || 'Failed to change storage class');
+    if (isDirectory) {
+      if (!confirm(`Are you sure you want to change the storage class of ALL files in the directory ${objectKey} to ${newStorageClass}? This operation cannot be undone.`)) {
+        return;
       }
-    } catch (err) {
-      showError('Storage class change failed', 'Network error occurred');
+      
+      try {
+        const result = await apiClient.changeBulkStorageClass(bucketName, objectKey, newStorageClass);
+        if (result.success) {
+          const { summary } = result.data || {};
+          success(
+            'Bulk storage class change completed', 
+            `Successfully changed ${summary?.successful || 0} files to ${newStorageClass}. ${summary?.errors || 0} errors, ${summary?.skipped || 0} skipped.`
+          );
+          startTransition(() => {
+            fetchObjects(); // Refresh the list to show updated storage class
+          });
+        } else {
+          showError('Bulk storage class change failed', result.error || 'Failed to change storage class');
+        }
+      } catch (err) {
+        showError('Bulk storage class change failed', 'Network error occurred');
+      }
+    } else {
+      if (!confirm(`Are you sure you want to change the storage class of ${objectKey} to ${newStorageClass}?`)) {
+        return;
+      }
+      
+      try {
+        const result = await apiClient.changeStorageClass(bucketName, objectKey, newStorageClass);
+        if (result.success) {
+          success('Storage class changed', `${objectKey} storage class has been changed to ${newStorageClass}`);
+          startTransition(() => {
+            fetchObjects(); // Refresh the list to show updated storage class
+          });
+        } else {
+          showError('Storage class change failed', result.error || 'Failed to change storage class');
+        }
+      } catch (err) {
+        showError('Storage class change failed', 'Network error occurred');
+      }
     }
   };
 
@@ -760,36 +786,12 @@ export function BucketDetail({ bucketName, onBack }: BucketDetailProps) {
                         isOptimistic ? 'opacity-60' : ''
                       } ${isDeleting ? 'bg-red-50' : 'hover:bg-gray-50'}`}>
                         {object.StorageClass && !object.Key.endsWith('/') ? (
-                          <div className="flex items-center gap-2">
-                            <Database className="h-3 w-3 flex-shrink-0" />
-                            {isOptimistic || isDeleting ? (
-                              <Badge 
-                                variant="secondary" 
-                                className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 border-gray-200 opacity-60"
-                              >
-                                {object.StorageClass}
-                              </Badge>
-                            ) : (
-                              <Select
-                                value={object.StorageClass}
-                                onValueChange={(newStorageClass) => handleStorageClassChange(object.Key, newStorageClass)}
-                              >
-                                <SelectTrigger className="h-6 text-xs border-0 bg-blue-100 text-blue-800 hover:bg-blue-200 focus:ring-1 focus:ring-blue-500 min-w-0 px-2 py-0">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="STANDARD">STANDARD</SelectItem>
-                                  <SelectItem value="STANDARD_IA">STANDARD_IA</SelectItem>
-                                  <SelectItem value="ONEZONE_IA">ONEZONE_IA</SelectItem>
-                                  <SelectItem value="INTELLIGENT_TIERING">INTELLIGENT_TIERING</SelectItem>
-                                  <SelectItem value="GLACIER">GLACIER</SelectItem>
-                                  <SelectItem value="GLACIER_IR">GLACIER_IR</SelectItem>
-                                  <SelectItem value="DEEP_ARCHIVE">DEEP_ARCHIVE</SelectItem>
-                                  <SelectItem value="REDUCED_REDUNDANCY">REDUCED_REDUNDANCY</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            )}
-                          </div>
+                          <StorageClassSelector
+                            currentStorageClass={object.StorageClass}
+                            onStorageClassChange={(newStorageClass) => handleStorageClassChange(object.Key, newStorageClass)}
+                            disabled={isOptimistic || isDeleting}
+                            objectKey={object.Key}
+                          />
                         ) : object.StorageClass && object.Key.endsWith('/') ? (
                           <div className="flex items-center gap-1">
                             <Database className="h-3 w-3" />
